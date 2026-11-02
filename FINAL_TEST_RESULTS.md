@@ -79,6 +79,8 @@ Run https://github.com/manjesh2024/flutterguard/actions/runs/41396678508 on `348
 - Flutter stable SDK: analyze and test
 - SARIF artifact from the security fixture
 
+Run https://github.com/manjesh2024/flutterguard/actions/runs/41397135903 on `251f9863ae3f7af03ee0ee023b74801fba053347` failed. Ubuntu, macOS, and the Flutter stable job timed out in `integration_test/cli_smoke_test.dart` after 30 seconds while the executable scanned three fixtures. The assertions were not reached. Windows passed. The timeout for that test is now 3 minutes.
+
 ## Not executed
 
 - A live query to `https://api.osv.dev` and a live `dart pub outdated` process. Parsers and injected clients were tested. Failures become status `unavailable` rather than invented advisories.

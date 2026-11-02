@@ -12,9 +12,10 @@ Date: 2026-11-02
 | Branch | main |
 | Product commit | `3482bf20a9beb3fa3b8f15eff439d1e58f054c32` |
 | Working tree at that commit | clean, tracking `origin/main` |
-| Actions | success, run 41396678508 |
+| Actions on the product commit | success, run 41396678508 |
+| Actions on the notes commit `251f986` | failed, run 41397135903 |
 
-`git ls-remote origin refs/heads/main` returned that same SHA before these release notes were added. These notes are a follow-up commit.
+`git ls-remote origin refs/heads/main` matched the product commit before these notes were added. Commit `251f986` published the notes and GitHub Actions failed: the executable smoke test ran three `dart run` scans and exceeded the default 30 second test timeout on Ubuntu, macOS, and the Flutter stable job. Windows completed inside the limit. The follow-up commit raises that test's timeout to 3 minutes without changing the assertions.
 
 ## Package
 
@@ -53,7 +54,8 @@ The product commit does not contain generated `build/` reports, coverage output,
 | --- | --- |
 | Implementation and local tests | PASS |
 | macOS `./tool/verify_all.sh` | PASS |
-| GitHub Actions Ubuntu, macOS, Windows, Flutter | PASS |
+| GitHub Actions on the product commit | PASS |
+| GitHub Actions on the notes commit | FAIL, smoke-test timeout |
 | Public GitHub push | PASS |
 | pub.dev dry-run | PASS |
 | pub.dev upload and public install | BLOCKED |

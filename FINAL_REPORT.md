@@ -127,9 +127,9 @@ Branch `main`. Product commit `3482bf20a9beb3fa3b8f15eff439d1e58f054c32`. Remote
 
 ## Q. GitHub Actions
 
-https://github.com/manjesh2024/flutterguard/actions/runs/41396678508
+https://github.com/manjesh2024/flutterguard/actions/runs/41396678508 on the product commit succeeded for Ubuntu verify, macOS verify, Windows Dart tests, Flutter stable SDK tests, and the SARIF artifact job. GitHub printed a Node.js 20 deprecation annotation for `actions/checkout@v4`. The run still succeeded.
 
-Conclusion: success. Jobs: Verify (ubuntu-latest), Verify (macos-latest), Windows Dart tests, Flutter stable SDK, SARIF artifact. GitHub printed a Node.js 20 deprecation annotation for `actions/checkout@v4`. The run still succeeded.
+https://github.com/manjesh2024/flutterguard/actions/runs/41397135903 on the release-notes commit failed. The executable smoke test exceeded the 30 second default while scanning three fixtures through `dart run`. Windows passed. The test timeout is now 3 minutes. The expected exit codes and secret checks are unchanged.
 
 ## R. pub.dev package
 
@@ -170,7 +170,8 @@ Do not pass `--skip-validation`. `--force` only skips the yes/no prompt; it stil
 | Baseline, suppression, deterministic auto-fix | PASS |
 | Secret redaction and read-only scans | PASS |
 | `./tool/verify_all.sh` on macOS | PASS |
-| GitHub Actions on Ubuntu, macOS, Windows, Flutter stable | PASS |
+| GitHub Actions on the product commit | PASS |
+| GitHub Actions on the notes commit | FAIL, smoke-test timeout, fixed in the following commit |
 | Public GitHub repository | PASS |
 | `dart pub publish --dry-run` with 0 warnings | PASS |
 | Public pub.dev package | BLOCKED |

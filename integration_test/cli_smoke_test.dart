@@ -45,5 +45,8 @@ void main() {
       expect(security.stdout.contains('AKIAIOSFODNN7EXAMPLE'), isFalse);
       expect(security.stdout.contains('supersecretvalue123'), isFalse);
     },
+    // Each invocation compiles the CLI with `dart run`. Three scans exceed
+    // the default 30 second test timeout on GitHub-hosted runners.
+    timeout: const Timeout(Duration(minutes: 3)),
   );
 }
