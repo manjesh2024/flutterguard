@@ -30,7 +30,7 @@ The published package must not contain credentials, private company rules, or ma
 4. Push the tag. `.github/workflows/release.yml` runs `./tool/verify_all.sh`, checks that the tag matches `pubspec.yaml`, and then calls `dart-lang/setup-dart/.github/workflows/publish.yml@v1`.
 5. The publish job uses GitHub environment `pub.dev` and OIDC. It does not use a long-lived pub.dev token.
 
-The workflow publishes only after verification passes. It does not run from `workflow_dispatch`. Pushing the tag is what starts it. Automated publishing is configured in the workflow; a version tag has not yet published a package through GitHub Actions.
+The workflow publishes only after verification passes. It does not run from `workflow_dispatch`. Pushing the tag is what starts it. Tag `v0.2.2` published `flutterguard_audit` 0.2.2 through that job.
 
 ## Repository
 

@@ -78,5 +78,5 @@ It does not include `test/fixtures/`, `docs/`, `doc/api/`, `build/`, `.dart_tool
 - `const Text('...')` is what the hardcoded-string check sees. A non-const `Text(...)` call is not collected.
 - pub.dev omits dotfiles and lockfiles. Use the visible `flutterguard.yaml` with `--config` from the published package.
 - No pub.dev score is claimed for 0.2.2.
-- The release workflow publishes a tag `vX.Y.Z` through GitHub environment `pub.dev`. A pre-release tag does not match that pattern. Automated publishing is not claimed until that workflow uploads 0.2.2.
+- Tag `v0.2.2` published the package. The release run is https://github.com/manjesh2024/flutterguard/actions/runs/41422605915. pub.dev lists version 0.2.2, published 2026-11-02T09:47:14.727389Z. Commit `a0ffa4bd2e4965c56c1ca64098983585f413a5ea`.
 - The basic example does not commit `pubspec.lock`. `flutter pub get` recreates it locally.
