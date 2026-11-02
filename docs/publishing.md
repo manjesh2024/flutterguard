@@ -24,11 +24,11 @@ The published package must not contain credentials, private company rules, or ma
 
 1. Run `./tool/verify_all.sh`.
 2. Confirm `CHANGELOG.md` and the version in `pubspec.yaml` match.
-3. Tag the commit.
-4. Run `dart pub publish --dry-run`.
-5. Run `dart pub publish` from an authenticated publisher account.
+3. Tag that commit `v` plus the pubspec version, for example `v0.2.0` for version `0.2.0`.
+4. Push the tag. `.github/workflows/release.yml` runs `./tool/verify_all.sh`, checks that the tag matches `pubspec.yaml`, and then calls `dart-lang/setup-dart/.github/workflows/publish.yml@v1`.
+5. The publish job uses GitHub environment `pub.dev` and OIDC. It does not use a long-lived pub.dev token.
 
-GitHub Actions on a `v*` tag runs the dry-run only.
+The workflow publishes only after verification passes. It does not run from `workflow_dispatch`. Pushing the tag is what starts it. Automated publishing is configured in the workflow; a version tag has not yet published a package through GitHub Actions.
 
 ## Repository
 

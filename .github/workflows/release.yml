@@ -1,22 +1,53 @@
 name: Release
 
+# pub.dev tag pattern: v{{version}}
+# Pushing v1.2.3 publishes pubspec version 1.2.3. workflow_dispatch is not a trigger.
 on:
   push:
     tags:
-      - "v*"
+      - "v[0-9]+.[0-9]+.[0-9]+"
 
 permissions:
   contents: read
 
 jobs:
-  package:
-    name: Package dry-run
+  verify:
+    name: Verify release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dart-lang/setup-dart@v1
         with:
           sdk: stable
-      - run: dart pub get
-      - run: dart test test integration_test
-      - run: dart pub publish --dry-run
+      - name: Release verification
+        run: ./tool/verify_all.sh
+      - name: Tag matches pubspec version
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          case "$tag" in
+            v*) version_from_tag="${tag#v}" ;;
+            *)
+              echo "Tag ${tag} does not match pub.dev tag pattern v{{version}}."
+              exit 1
+              ;;
+          esac
+          version="$(awk '/^version: / { print $2; exit }' pubspec.yaml)"
+          if [ -z "$version" ]; then
+            echo "pubspec.yaml has no version."
+            exit 1
+          fi
+          if [ "$version_from_tag" != "$version" ]; then
+            echo "Git tag ${tag} does not match pubspec.yaml version ${version}."
+            exit 1
+          fi
+          echo "Git tag ${tag} matches pubspec.yaml version ${version}."
+
+  publish:
+    name: Publish to pub.dev
+    needs: verify
+    permissions:
+      id-token: write
+    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
+    with:
+      environment: pub.dev
