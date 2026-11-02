@@ -49,10 +49,10 @@ flutter pub get
 flutter analyze
 flutter test
 cd ../..
-dart run bin/flutterguard.dart example/basic_flutter_app --offline
+dart run bin/flutterguard.dart example/basic_flutter_app --offline --config example/basic_flutter_app/flutterguard.yaml
 ```
 
-After activation, the same scan is `flutterguard example/basic_flutter_app --offline`.
+After activation, the same scan is `flutterguard example/basic_flutter_app --offline --config example/basic_flutter_app/flutterguard.yaml`.
 
 Reports are written to `example/basic_flutter_app/build/flutterguard/`. Exit code 0 means the quality gate passed.
 
@@ -63,14 +63,16 @@ Reports are written to `example/basic_flutter_app/build/flutterguard/`. Exit cod
 How discovery works is written in [advanced_monorepo/README.md](advanced_monorepo/README.md).
 
 ```bash
-dart run bin/flutterguard.dart example/advanced_monorepo --offline
+dart run bin/flutterguard.dart example/advanced_monorepo --offline --config example/advanced_monorepo/flutterguard.yaml
 ```
 
 The summary lists three projects. `apps/shop/lib/generated/skipped.dart` is excluded by `**/generated/**`. The gate passes. `FG-DEP-005` reports the `shared_ui` path dependencies. Those findings are expected for this workspace.
 
 ## Configuration
 
-Copy [flutterguard.yaml](flutterguard.yaml) to the root of an app as `.flutterguard.yaml`. `init` writes the same template:
+Copy [flutterguard.yaml](flutterguard.yaml) to the root of an app as `.flutterguard.yaml`. That hidden name is the file FlutterGuard loads when `--config` is omitted. `init` writes the same template:
+
+pub.dev does not publish a file whose name starts with a dot, and it does not publish `pubspec.lock`. Each example therefore also contains `flutterguard.yaml` with the same bytes as its hidden config. A Git checkout loads the hidden file automatically. The commands below pass `--config` so they use the file that is visible in this package.
 
 ```bash
 dart run bin/flutterguard.dart init --help
@@ -78,7 +80,7 @@ dart run bin/flutterguard.dart init --help
 
 Run `init --path <app>` in an app that does not already have `.flutterguard.yaml`. `--force` replaces an existing file. Without a config file, the scan uses built-in defaults: discovery `auto`, every module on, architecture profile `none`, reports under `build/flutterguard`, and a quality gate that fails on high and critical. A missing file is not an error. A malformed file or an unknown key stops the scan with exit code 2 and does not write reports.
 
-The basic app's `.flutterguard.yaml` sets `discovery.mode: single` and leaves the other sections at those defaults. The monorepo file uses `monorepo` and `featureFirst`. The intentional sample uses `clean`. Those are three different profiles, not three copies of the same file.
+The basic app sets `discovery.mode: single` and leaves the other sections at those defaults. The monorepo file uses `monorepo` and `featureFirst`. The intentional sample uses `clean`. Those are three different profiles, not three copies of the full template.
 
 | Field | Meaning |
 | --- | --- |
@@ -121,7 +123,7 @@ The basic app's `.flutterguard.yaml` sets `discovery.mode: single` and leaves th
 From the repository root:
 
 ```bash
-dart run bin/flutterguard.dart example/basic_flutter_app --offline
+dart run bin/flutterguard.dart example/basic_flutter_app --offline --config example/basic_flutter_app/flutterguard.yaml
 ```
 
 `--offline` skips the optional network checks. Those checks are already off unless the config enables them.

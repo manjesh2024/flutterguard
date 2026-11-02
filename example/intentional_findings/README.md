@@ -7,7 +7,7 @@ Read [FINDINGS.md](FINDINGS.md) for each rule id, severity, and reason.
 From the repository root:
 
 ```bash
-dart run bin/flutterguard.dart example/intentional_findings --offline
+dart run bin/flutterguard.dart example/intentional_findings --offline --config example/intentional_findings/flutterguard.yaml
 ```
 
 Exit code 1 is expected. The scan finished and the quality gate failed. Source files are not modified.

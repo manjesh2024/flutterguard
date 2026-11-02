@@ -2,7 +2,7 @@
 
 FlutterGuard treats a directory as a Flutter project when its `pubspec.yaml` depends on the Flutter SDK or has a top-level `flutter:` section.
 
-From this directory, `.flutterguard.yaml` sets `discovery.mode` to `monorepo` and leaves `discovery.roots` empty. Empty roots mean:
+`flutterguard.yaml` in this directory is the scan configuration. The Git checkout also keeps the same bytes in `.flutterguard.yaml`, which FlutterGuard loads when `--config` is omitted. pub.dev publishes the visible name. `discovery.mode` is `monorepo`. Empty `discovery.roots` mean:
 
 1. Walk this tree to `discovery.maxDepth` (4). Symlinks are not followed. `.dart_tool`, `build`, and the other skipped directory names are not entered.
 2. Read `melos.yaml` `packages` and add each matching Flutter project. The patterns here are `apps/*` and `packages/*`.
@@ -21,5 +21,5 @@ The quality gate passes. Two medium `FG-DEP-005` findings remain because `shop_a
 Run from the repository root:
 
 ```bash
-dart run bin/flutterguard.dart example/advanced_monorepo --offline
+dart run bin/flutterguard.dart example/advanced_monorepo --offline --config example/advanced_monorepo/flutterguard.yaml
 ```

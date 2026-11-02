@@ -110,16 +110,16 @@ PY
   basic_before="$(checksums example/basic_flutter_app)"
   intentional_before="$(checksums example/intentional_findings)"
   monorepo_before="$(checksums example/advanced_monorepo)"
-  dart run bin/flutterguard.dart example/basic_flutter_app --offline
+  dart run bin/flutterguard.dart example/basic_flutter_app --offline --config example/basic_flutter_app/flutterguard.yaml
   set +e
-  dart run bin/flutterguard.dart example/intentional_findings --offline
+  dart run bin/flutterguard.dart example/intentional_findings --offline --config example/intentional_findings/flutterguard.yaml
   intentional_code=$?
   set -e
   if [[ "$intentional_code" -ne 1 ]]; then
     echo "intentional sample expected exit 1, got $intentional_code"
     exit 1
   fi
-  dart run bin/flutterguard.dart example/advanced_monorepo --offline
+  dart run bin/flutterguard.dart example/advanced_monorepo --offline --config example/advanced_monorepo/flutterguard.yaml
   dart run bin/flutterguard.dart --version
   dart run bin/flutterguard.dart --help >/dev/null
   dart run bin/flutterguard.dart doctor --path example/basic_flutter_app

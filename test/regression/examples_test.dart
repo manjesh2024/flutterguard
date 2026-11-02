@@ -12,6 +12,20 @@ void main() {
     flutterVersion: '3.47.7',
   );
 
+  test('published configs match the hidden configs', () {
+    for (final name in [
+      'basic_flutter_app',
+      'advanced_monorepo',
+      'intentional_findings',
+    ]) {
+      final hidden = File('example/$name/.flutterguard.yaml')
+          .readAsStringSync();
+      final visible = File('example/$name/flutterguard.yaml')
+          .readAsStringSync();
+      expect(visible, hidden, reason: name);
+    }
+  });
+
   test('monorepo discovery finds the workspace packages', () {
     final root = Directory('example/advanced_monorepo').absolute.path;
     final config = loadConfig(rootPath: root);

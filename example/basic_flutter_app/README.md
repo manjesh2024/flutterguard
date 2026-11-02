@@ -10,7 +10,7 @@ flutter pub get
 flutter analyze
 flutter test
 cd ../..
-dart run bin/flutterguard.dart example/basic_flutter_app --offline
+dart run bin/flutterguard.dart example/basic_flutter_app --offline --config example/basic_flutter_app/flutterguard.yaml
 ```
 
 The annotated configuration for every field is [`../flutterguard.yaml`](../flutterguard.yaml). See [`../README.md`](../README.md).

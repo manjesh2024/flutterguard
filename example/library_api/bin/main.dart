@@ -20,7 +20,8 @@ Future<void> main() async {
     'reports ${defaults.reportDirectory}.',
   );
 
-  final loaded = loadConfig(rootPath: basicApp.path);
+  final basicConfig = p.join(basicApp.path, 'flutterguard.yaml');
+  final loaded = loadConfig(rootPath: basicApp.path, configPath: basicConfig);
   stdout.writeln(
     'Loaded basic_flutter_app discovery ${loaded.discoveryMode.name}.',
   );
@@ -47,7 +48,12 @@ Future<void> main() async {
   }
 
   final basic = await const FlutterGuardScanner().scan(
-    ScanRequest(rootPath: basicApp.path, offline: true, writeReports: false),
+    ScanRequest(
+      rootPath: basicApp.path,
+      configPath: basicConfig,
+      offline: true,
+      writeReports: false,
+    ),
   );
   stdout.writeln(
     'Basic app findings: ${basic.report.findings.length}. '
@@ -61,7 +67,12 @@ Future<void> main() async {
   }
 
   final sample = await const FlutterGuardScanner().scan(
-    ScanRequest(rootPath: intentional.path, offline: true, writeReports: false),
+    ScanRequest(
+      rootPath: intentional.path,
+      configPath: p.join(intentional.path, 'flutterguard.yaml'),
+      offline: true,
+      writeReports: false,
+    ),
   );
   final rules = sample.report.findings.map((finding) => finding.ruleId).toSet();
   stdout.writeln(
