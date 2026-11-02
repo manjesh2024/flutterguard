@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1
+
+- Document that `flutterguard_audit` 0.1.0 is published and that `$HOME/.pub-cache/bin` must be on `PATH` before `flutterguard` runs.
+
 ## 0.1.0
 
 - Initial public release of the `flutterguard_audit` package and the `flutterguard` command.

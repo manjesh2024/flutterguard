@@ -2,7 +2,7 @@ name: flutterguard_audit
 description: >-
   Audit Flutter projects for branding, configuration, architecture,
   code quality, security, localization, dependencies, and platform setup.
-version: 0.1.0
+version: 0.1.1
 homepage: https://github.com/manjesh2024/flutterguard
 repository: https://github.com/manjesh2024/flutterguard
 issue_tracker: https://github.com/manjesh2024/flutterguard/issues

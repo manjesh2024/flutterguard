@@ -18,6 +18,8 @@ The published package must not contain credentials, private company rules, or ma
 
 `docs/` is the repository guide set required by the project layout. pub.dev warns on a plural top-level `docs` directory, so `.pubignore` omits it and `doc/README.md` points at the GitHub guides. `test/fixtures/` is also omitted. Those apps import Flutter and other packages on purpose, and publishing them as part of this Dart package would make pub analyze those imports as dependencies of FlutterGuard. The fixtures remain in the Git repository and in CI.
 
+`flutterguard_audit` 0.1.0 is the first version published on pub.dev. Later patch versions follow the same dry-run and publish steps.
+
 ## Release steps
 
 1. Run `./tool/verify_all.sh`.

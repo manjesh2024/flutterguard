@@ -16,12 +16,20 @@ The pub.dev package is `flutterguard_audit`. The terminal command is `fluttergua
 
 ## Installation
 
-From pub.dev, after the package is published:
+`flutterguard_audit` 0.1.0 is published on [pub.dev](https://pub.dev/packages/flutterguard_audit).
 
 ```bash
 dart pub global activate flutterguard_audit
+```
+
+Pub installs the `flutterguard` executable in `$HOME/.pub-cache/bin`. That directory is not on the default `PATH`. Add it, then check the version from any directory:
+
+```bash
+export PATH="$PATH:$HOME/.pub-cache/bin"
 flutterguard --version
 ```
+
+The command must print `flutterguard 0.1.0`. Dart `^3.13.0` is required because the package uses analyzer 14. That matches current Flutter stable.
 
 From a checkout of this repository:
 
@@ -29,8 +37,6 @@ From a checkout of this repository:
 dart pub get
 dart run bin/flutterguard.dart --version
 ```
-
-FlutterGuard requires Dart `^3.13.0` because it uses analyzer 14. That matches current Flutter stable.
 
 ## One-command usage
 
