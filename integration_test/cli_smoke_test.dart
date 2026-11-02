@@ -21,7 +21,7 @@ void main() {
     expect(help.stdout, contains('flutterguard'));
     final version = await run(['--version']);
     expect(version.exitCode, 0);
-    expect(version.stdout, contains('0.1.2'));
+    expect(version.stdout, contains('0.2.0'));
   });
 
   test(

@@ -1,0 +1,12 @@
+name: flavor_names
+description: Legitimate flavor-specific application names.
+publish_to: none
+version: 0.0.1
+license: MIT
+environment:
+  sdk: ^3.13.0
+dependencies:
+  flutter:
+    sdk: flutter
+flutter:
+  uses-material-design: true

@@ -1,0 +1,6 @@
+android {
+    defaultConfig {
+        applicationId "com.smoke.template"
+        minSdk 24
+    }
+}

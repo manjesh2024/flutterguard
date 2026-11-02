@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0
+
+- Compare customer-facing display names. Flutter engine plists are ignored, Xcode `PRODUCT_NAME` values are resolved, and spacing differences such as `Smoke App` and `smoke_app` match. Flavor-specific names stay out of that comparison.
+- Treat Android debug, profile, and release manifests as overlays. A missing application label is reported on the main manifest when the main source set exists.
+- Recognize SPDX identifiers and common license headings, including BSD redistribution text. Unrecognized license text is informational metadata. Flutter applications are not flagged for an empty pubspec license field.
+- Treat constructor names and extension methods as uses of an imported library. Extension imports stay unfixed when the use is uncertain.
+- State that unused-dependency results are a heuristic and that FlutterGuard does not remove dependencies. `CupertinoIcons` counts as a use of `cupertino_icons`.
+- Skip short labels, debug text, and test files in the hardcoded-string heuristic.
+- Replace the HTML report with a local dashboard: light and dark themes, summary cards, filters, sorting, expandable findings, and relative export links. JSON and SARIF schemas are unchanged.
+
 ## 0.1.2
 
 - Document the public Dart API and enforce `public_member_api_docs`.

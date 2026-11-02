@@ -260,9 +260,10 @@ final class PluralSelectRule implements AuditRule {
 
 /// Heuristic for sentence-like literals in `Text` and common label arguments.
 ///
-/// Generated files and paths under `test/` are skipped. A literal is treated
-/// as user-facing when it contains a space and a run of at least three
-/// letters, and it does not start with `http` or contain `/`.
+/// Generated files, tests, and debug text are skipped. A literal is treated
+/// as user-facing when it contains a space, a run of at least three letters,
+/// and enough text to be more than a short label. URLs and path-like values
+/// are skipped.
 final class HardcodedStringRule implements AuditRule {
   @override
   String get id => 'FG-L10N-006';
@@ -278,16 +279,16 @@ final class HardcodedStringRule implements AuditRule {
   AuditModule get module => AuditModule.localization;
   @override
   String get description =>
-      'Heuristic for Text and common label arguments that contain a sentence-like literal.';
+      'Heuristic for Text and common label arguments that contain a sentence-like literal. Tests, debug text, and short labels are skipped.';
   @override
   String get recommendation =>
-      'Move user-facing copy into an ARB catalog. Short labels and non-UI strings are not flagged.';
+      'Move user-facing copy into an ARB catalog. Short labels, test strings, and debug text are not flagged.';
 
   @override
   List<Finding> evaluate(RuleScope scope) {
     final findings = <Finding>[];
     for (final file in scope.project.dartIndex.files) {
-      if (file.generated || file.path.startsWith('test/')) {
+      if (file.generated || _isTestPath(file.path)) {
         continue;
       }
       for (final literal in file.widgetStrings) {
@@ -312,11 +313,33 @@ final class HardcodedStringRule implements AuditRule {
 
   bool _userFacing(String value) {
     final trimmed = value.trim();
-    if (trimmed.contains(' ') && RegExp(r'[A-Za-z]{3,}').hasMatch(trimmed)) {
-      return !trimmed.startsWith('http') && !trimmed.contains('/');
+    if (trimmed.startsWith('http') || trimmed.contains('/')) {
+      return false;
     }
-    return false;
+    if (RegExp(
+      r'^(debug|todo|fixme|lorem)\b',
+      caseSensitive: false,
+    ).hasMatch(trimmed)) {
+      return false;
+    }
+    final words = trimmed
+        .split(RegExp(r'\s+'))
+        .where((word) => word.isNotEmpty)
+        .length;
+    if (words < 2 || trimmed.length < 12) {
+      return false;
+    }
+    return RegExp(r'[A-Za-z]{3,}').hasMatch(trimmed);
   }
+}
+
+bool _isTestPath(String path) {
+  final normalized = path.replaceAll('\\', '/');
+  return normalized.startsWith('test/') ||
+      normalized.startsWith('integration_test/') ||
+      normalized.startsWith('testing/') ||
+      normalized.contains('/test/') ||
+      normalized.endsWith('_test.dart');
 }
 
 List<ArbCatalog> _valid(RuleScope scope) {

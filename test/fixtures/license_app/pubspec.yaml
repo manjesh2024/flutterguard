@@ -1,0 +1,11 @@
+name: license_app
+description: Flutter application without pubspec license metadata.
+publish_to: none
+version: 0.0.1
+environment:
+  sdk: ^3.13.0
+dependencies:
+  flutter:
+    sdk: flutter
+flutter:
+  uses-material-design: true

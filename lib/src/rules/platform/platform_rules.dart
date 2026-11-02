@@ -1,3 +1,4 @@
+import '../../analyzer/manifest_parser.dart';
 import '../../core/config.dart';
 import '../../core/finding.dart';
 import '../../core/severity.dart';
@@ -24,10 +25,10 @@ final class AndroidPlatformRule implements AuditRule {
   AuditModule get module => AuditModule.platform;
   @override
   String get description =>
-      'Checks an existing android/ directory for a manifest and exported components without intent filters.';
+      'Checks an existing android/ directory for a manifest and exported components without intent filters. Debug, profile, and release overlays inherit the main application label.';
   @override
   String get recommendation =>
-      'Add the missing manifest entry or an intent filter before exporting a component.';
+      'Add the missing manifest entry on the main source set, or an intent filter before exporting a component.';
 
   @override
   List<Finding> evaluate(RuleScope scope) {
@@ -45,7 +46,12 @@ final class AndroidPlatformRule implements AuditRule {
         ),
       );
     }
-    for (final manifest in scope.project.manifests) {
+    final manifests = scope.project.manifests;
+    final mains = manifests.where(
+      (manifest) => isMainAndroidManifest(manifest.path),
+    );
+    final labelManifests = mains.isEmpty ? manifests : mains;
+    for (final manifest in manifests) {
       if (manifest.error != null) {
         findings.add(
           emit(
@@ -53,16 +59,6 @@ final class AndroidPlatformRule implements AuditRule {
             scope,
             message:
                 'AndroidManifest.xml could not be parsed: ${manifest.error}',
-            path: manifest.path,
-          ),
-        );
-      }
-      if (manifest.label == null) {
-        findings.add(
-          emit(
-            this,
-            scope,
-            message: 'Android application label is missing.',
             path: manifest.path,
           ),
         );
@@ -75,6 +71,19 @@ final class AndroidPlatformRule implements AuditRule {
             message: 'Exported component $component has no intent filter.',
             path: manifest.path,
             heuristic: true,
+          ),
+        );
+      }
+    }
+    for (final manifest in labelManifests) {
+      final label = manifest.label?.trim();
+      if (label == null || label.isEmpty) {
+        findings.add(
+          emit(
+            this,
+            scope,
+            message: 'Android application label is missing.',
+            path: manifest.path,
           ),
         );
       }

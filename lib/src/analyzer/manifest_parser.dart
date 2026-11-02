@@ -117,6 +117,17 @@ ManifestInfo parseManifest(String path, String text) {
   }
 }
 
+/// Whether [path] is the manifest that defines the application, not an overlay.
+///
+/// `src/debug`, `src/profile`, `src/release`, and test source sets are merged
+/// on top of `src/main` by the Android Gradle plugin. Those overlays are not
+/// required to repeat `android:label`.
+bool isMainAndroidManifest(String path) {
+  final normalized = path.replaceAll('\\', '/');
+  return !RegExp(r'/src/(debug|profile|release|androidTest|test)/')
+      .hasMatch(normalized);
+}
+
 String? _attr(XmlElement element, String localName) {
   for (final attribute in element.attributes) {
     if (attribute.name.local == localName) {

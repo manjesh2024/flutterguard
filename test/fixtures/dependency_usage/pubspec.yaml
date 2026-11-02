@@ -1,0 +1,15 @@
+name: dependency_usage
+description: Dependency references across project files.
+publish_to: none
+version: 0.0.1
+license: MIT
+environment:
+  sdk: ^3.13.0
+dependencies:
+  flutter:
+    sdk: flutter
+  meta: ^1.0.0
+  cupertino_icons: ^1.0.0
+  vector_math: ^2.1.0
+flutter:
+  uses-material-design: true

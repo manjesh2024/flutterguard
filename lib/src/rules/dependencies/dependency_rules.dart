@@ -65,10 +65,10 @@ final class UnusedDependencyRule implements AuditRule {
   AuditModule get module => AuditModule.dependencies;
   @override
   String get description =>
-      'Reports a direct dependency that is never referenced by package: import or analysis_options. Codegen and lint packages in the built-in tooling list are skipped.';
+      'Reports a direct dependency that is never referenced in scanned project files. The check is a heuristic and does not edit pubspec.yaml. Codegen and lint packages in the built-in tooling list are skipped.';
   @override
   String get recommendation =>
-      'Remove the dependency or import it. The tooling allow list is not a complete catalog.';
+      'Confirm the package is unused, then remove it yourself. FlutterGuard does not remove dependencies. Fonts, code generation, and native code can use a package without a package: import.';
 
   @override
   List<Finding> evaluate(RuleScope scope) {
@@ -82,9 +82,7 @@ final class UnusedDependencyRule implements AuditRule {
           toolingPackages.contains(dependency.name)) {
         continue;
       }
-      final needle = 'package:${dependency.name}/';
-      final optionsNeedle = 'package:${dependency.name}';
-      if (corpus.contains(needle) || corpus.contains(optionsNeedle)) {
+      if (_dependencyReferenced(corpus, dependency.name)) {
         continue;
       }
       findings.add(
@@ -92,7 +90,7 @@ final class UnusedDependencyRule implements AuditRule {
           this,
           scope,
           message:
-              'Direct dependency ${dependency.name} has no package import in the scanned files.',
+              'Direct dependency ${dependency.name} has no reference in the scanned project files. This is a heuristic; FlutterGuard did not remove it.',
           path: 'pubspec.yaml',
         ),
       );
@@ -223,11 +221,12 @@ final class DeprecatedPackageRule implements AuditRule {
 
 /// Reads LICENSE files already present in the local pub cache.
 ///
-/// An empty or missing pubspec license field is an info finding. Each direct
-/// locked package other than `flutter` and `flutter_test` is checked with
-/// [cachedLicenseKind]: a missing cache file is info, and a file that matches
-/// no known heading is reported at the rule default. This is metadata, not a
-/// legal opinion.
+/// A Flutter application with platform directories is not flagged for an
+/// empty pubspec license field. A library package still gets an info finding.
+/// Each direct locked package other than `flutter` and `flutter_test` is
+/// checked with [cachedLicenseKind]: a missing cache file is info, and a file
+/// that matches no known heading or SPDX identifier is info. This is
+/// metadata, not a legal opinion.
 final class LicenseMetadataRule implements AuditRule {
   @override
   String get id => 'FG-DEP-004';
@@ -243,21 +242,22 @@ final class LicenseMetadataRule implements AuditRule {
   AuditModule get module => AuditModule.dependencies;
   @override
   String get description =>
-      'Reads LICENSE files already present in the local pub cache. This is metadata, not a legal opinion.';
+      'Reads LICENSE files already present in the local pub cache and recognizes SPDX identifiers and common headings. Unrecognized text is metadata, not a license violation. Flutter applications are not flagged for an empty pubspec license field.';
   @override
   String get recommendation =>
-      'Run dart pub get and review the license file. Do not treat a missing cache entry as a license violation.';
+      'Run dart pub get and review the license file. A missing cache entry or an unrecognized heading is not a license violation.';
 
   @override
   List<Finding> evaluate(RuleScope scope) {
     final findings = <Finding>[];
-    if (scope.project.pubspec.license == null ||
-        scope.project.pubspec.license!.trim().isEmpty) {
+    final license = scope.project.pubspec.license?.trim();
+    final isApplication = scope.project.platforms.isNotEmpty;
+    if (!isApplication && (license == null || license.isEmpty)) {
       findings.add(
         emit(
           this,
           scope,
-          message: 'pubspec.yaml has no license field.',
+          message: 'pubspec.yaml has no license field. This is metadata for a library package, not a license violation.',
           path: 'pubspec.yaml',
           severity: Severity.info,
         ),
@@ -287,8 +287,9 @@ final class LicenseMetadataRule implements AuditRule {
             this,
             scope,
             message:
-                'LICENSE file for ${locked.name} ${locked.version} did not match a known license heading.',
+                'LICENSE file for ${locked.name} ${locked.version} did not match a known heading or SPDX identifier. This is unrecognized metadata, not a license violation.',
             path: 'pubspec.lock',
+            severity: Severity.info,
           ),
         );
       }
@@ -397,6 +398,26 @@ final class VulnerabilityRule implements AuditRule {
   }
 }
 
+bool _dependencyReferenced(String corpus, String name) {
+  if (corpus.contains('package:$name/') || corpus.contains('package:$name')) {
+    return true;
+  }
+  for (final symbol in _indirectSymbols[name] ?? const <String>[]) {
+    if (corpus.contains(symbol)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/// Symbols that use a package without a `package:` import of that package.
+///
+/// `CupertinoIcons` is declared by Flutter and rendered with the font shipped
+/// by `cupertino_icons`.
+const _indirectSymbols = {
+  'cupertino_icons': ['CupertinoIcons'],
+};
+
 String _corpus(RuleScope scope) {
   final buffer = StringBuffer();
   for (final file in scope.project.files.files) {
@@ -406,6 +427,71 @@ String _corpus(RuleScope scope) {
     }
   }
   return buffer.toString();
+}
+
+/// Classifies license text from an SPDX identifier or a recognized heading.
+///
+/// Returns `MIT`, `Apache-2.0`, `BSD`, `ISC`, `GPL`, `MPL-2.0`, or
+/// `Unlicense` when the text matches. Returns `unknown` when it does not.
+/// This is a heading check, not a legal conclusion.
+String classifyLicenseText(String text) {
+  final lower = text.toLowerCase();
+  final spdx = RegExp(r'spdx-license-identifier:\s*([a-z0-9.\-+]+)')
+      .firstMatch(lower);
+  if (spdx != null) {
+    return _spdxKind(spdx.group(1)!);
+  }
+  if (lower.contains('mit license') ||
+      lower.contains('permission is hereby granted, free of charge')) {
+    return 'MIT';
+  }
+  if (lower.contains('apache license')) {
+    return 'Apache-2.0';
+  }
+  if (lower.contains('bsd') ||
+      lower.contains('redistribution and use in source and binary forms')) {
+    return 'BSD';
+  }
+  if (lower.contains('isc license') ||
+      lower.contains('permission to use, copy, modify, and/or distribute')) {
+    return 'ISC';
+  }
+  if (lower.contains('gnu general public') ||
+      lower.contains('gnu lesser general public')) {
+    return 'GPL';
+  }
+  if (lower.contains('mozilla public license')) {
+    return 'MPL-2.0';
+  }
+  if (lower.contains('unlicense')) {
+    return 'Unlicense';
+  }
+  return 'unknown';
+}
+
+String _spdxKind(String id) {
+  if (id == 'mit') {
+    return 'MIT';
+  }
+  if (id.startsWith('apache-2')) {
+    return 'Apache-2.0';
+  }
+  if (id.startsWith('bsd')) {
+    return 'BSD';
+  }
+  if (id == 'isc') {
+    return 'ISC';
+  }
+  if (id.contains('gpl')) {
+    return 'GPL';
+  }
+  if (id.startsWith('mpl')) {
+    return 'MPL-2.0';
+  }
+  if (id == 'unlicense') {
+    return 'Unlicense';
+  }
+  return id.toUpperCase();
 }
 
 /// License heading found for [package] at [version] in the local pub cache.
@@ -437,24 +523,7 @@ String? cachedLicenseKind(String package, String version) {
       if (!file.existsSync()) {
         continue;
       }
-      final text = file.readAsStringSync().toLowerCase();
-      if (text.contains('mit license') ||
-          text.contains('permission is hereby granted')) {
-        return 'MIT';
-      }
-      if (text.contains('apache license')) {
-        return 'Apache-2.0';
-      }
-      if (text.contains('bsd')) {
-        return 'BSD';
-      }
-      if (text.contains('isc license')) {
-        return 'ISC';
-      }
-      if (text.contains('gnu general public')) {
-        return 'GPL';
-      }
-      return 'unknown';
+      return classifyLicenseText(file.readAsStringSync());
     }
   }
   return null;

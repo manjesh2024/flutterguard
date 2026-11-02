@@ -31,9 +31,9 @@ Recommendation: Set PRODUCT_BUNDLE_IDENTIFIER to the shipped bundle id, not a Fl
 - Default severity: medium
 - Heuristic: false
 
-Compares default, non-flavor application names across Android, iOS, and web.
+Compares customer-facing display names. Flutter engine plists are ignored, Xcode variables such as PRODUCT_NAME are resolved, and flavor-specific names are not compared with the default name.
 
-Recommendation: Use one customer-facing name, or give flavor-specific names an explicit flavor.
+Recommendation: Use one customer-facing name. Flavor-specific names are allowed when they are declared on that flavor.
 
 ## FG-BRAND-004
 
@@ -273,9 +273,9 @@ Recommendation: Await the future, return it, or wrap it in unawaited. Declaratio
 - Default severity: low
 - Heuristic: false
 
-Reports unused imports from the AST. Only prefix, show, and redundant dart:core imports are auto-fixable.
+Reports unused imports from the Dart analyzer AST. Constructor names and extension methods count as references. Only prefix, show, and redundant dart:core imports are auto-fixable.
 
-Recommendation: Remove the import. Bare imports that may exist for extensions are reported and not auto-fixed.
+Recommendation: Remove the import when it is unused. Imports that may exist only for an extension are not auto-fixed.
 
 ## FG-QUAL-009
 
@@ -449,9 +449,9 @@ Recommendation: Give every locale the same plural or select cases, including oth
 - Default severity: low
 - Heuristic: true
 
-Heuristic for Text and common label arguments that contain a sentence-like literal.
+Heuristic for Text and common label arguments that contain a sentence-like literal. Tests, debug text, and short labels are skipped.
 
-Recommendation: Move user-facing copy into an ARB catalog. Short labels and non-UI strings are not flagged.
+Recommendation: Move user-facing copy into an ARB catalog. Short labels, test strings, and debug text are not flagged.
 
 ## FG-DEP-001
 
@@ -460,9 +460,9 @@ Recommendation: Move user-facing copy into an ARB catalog. Short labels and non-
 - Default severity: low
 - Heuristic: true
 
-Reports a direct dependency that is never referenced by package: import or analysis_options. Codegen and lint packages in the built-in tooling list are skipped.
+Reports a direct dependency that is never referenced in scanned project files. The check is a heuristic and does not edit pubspec.yaml. Codegen and lint packages in the built-in tooling list are skipped.
 
-Recommendation: Remove the dependency or import it. The tooling allow list is not a complete catalog.
+Recommendation: Confirm the package is unused, then remove it yourself. FlutterGuard does not remove dependencies. Fonts, code generation, and native code can use a package without a package: import.
 
 ## FG-DEP-002
 
@@ -493,9 +493,9 @@ Recommendation: Read the replacement package notes before migrating. This indica
 - Default severity: low
 - Heuristic: true
 
-Reads LICENSE files already present in the local pub cache. This is metadata, not a legal opinion.
+Reads LICENSE files already present in the local pub cache and recognizes SPDX identifiers and common headings. Unrecognized text is metadata, not a license violation. Flutter applications are not flagged for an empty pubspec license field.
 
-Recommendation: Run dart pub get and review the license file. Do not treat a missing cache entry as a license violation.
+Recommendation: Run dart pub get and review the license file. A missing cache entry or an unrecognized heading is not a license violation.
 
 ## FG-DEP-005
 
@@ -526,9 +526,9 @@ Recommendation: Read the advisory and upgrade or apply the documented mitigation
 - Default severity: medium
 - Heuristic: false
 
-Checks an existing android/ directory for a manifest and exported components without intent filters.
+Checks an existing android/ directory for a manifest and exported components without intent filters. Debug, profile, and release overlays inherit the main application label.
 
-Recommendation: Add the missing manifest entry or an intent filter before exporting a component.
+Recommendation: Add the missing manifest entry on the main source set, or an intent filter before exporting a component.
 
 ## FG-PLAT-002
 

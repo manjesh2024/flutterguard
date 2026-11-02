@@ -897,6 +897,7 @@ final class _Parsed {
     required this.exports,
     required this.identifiers,
     required this.publicNames,
+    required this.extensionMethods,
     required this.comments,
     required this.methods,
     required this.classes,
@@ -923,6 +924,9 @@ final class _Parsed {
   final List<ExportFact> exports;
   final Set<String> identifiers;
   final Set<String> publicNames;
+
+  /// Public method names declared on extensions in this file.
+  final Set<String> extensionMethods;
   final List<CommentFact> comments;
   final List<MethodFact> methods;
   final List<ClassFact> classes;
@@ -1002,6 +1006,7 @@ _Parsed _parse(IndexedFile file, String packageName) {
     exports: collector.exports,
     identifiers: collector.identifiers,
     publicNames: collector.publicNames,
+    extensionMethods: collector.extensionMethods,
     comments: collector.comments,
     methods: collector.methods,
     classes: collector.classes,
@@ -1134,8 +1139,13 @@ _Unused _unusedImport(
   if (target == null || import.shown.isNotEmpty) {
     return const _Unused.used();
   }
+  final methods = _availableExtensionMethods(target, byPath, <String>{});
+  if (methods.any(used.contains)) {
+    return const _Unused.used();
+  }
   final names = _availableNames(target, byPath, <String>{});
   if (names.isEmpty) {
+    // A library with no top-level names can still export an extension.
     return const _Unused.used();
   }
   final visible = names.where((name) => !import.hidden.contains(name));
@@ -1169,6 +1179,26 @@ Set<String> _availableNames(
     }
     exported.removeAll(export.hidden);
     names.addAll(exported);
+  }
+  stack.remove(file.path);
+  return names;
+}
+
+Set<String> _availableExtensionMethods(
+  _Parsed file,
+  Map<String, _Parsed> byPath,
+  Set<String> stack,
+) {
+  if (!stack.add(file.path)) {
+    return const {};
+  }
+  final names = {...file.extensionMethods};
+  for (final export in file.exports) {
+    final target = export.targetPath == null ? null : byPath[export.targetPath];
+    if (target == null) {
+      continue;
+    }
+    names.addAll(_availableExtensionMethods(target, byPath, stack));
   }
   stack.remove(file.path);
   return names;
@@ -1319,6 +1349,8 @@ final class _Collector extends RecursiveAstVisitor<void> {
   final List<ExportFact> exports = [];
   final identifiers = <String>{};
   final publicNames = <String>{};
+  final extensionMethods = <String>{};
+  var extensionDepth = 0;
   final comments = <CommentFact>[];
   final methods = <MethodFact>[];
   final classes = <ClassFact>[];
@@ -1414,6 +1446,16 @@ final class _Collector extends RecursiveAstVisitor<void> {
   void visitSimpleIdentifier(SimpleIdentifier node) {
     identifiers.add(node.name);
     super.visitSimpleIdentifier(node);
+  }
+
+  @override
+  void visitNamedType(NamedType node) {
+    identifiers.add(node.name.lexeme);
+    final prefix = node.importPrefix;
+    if (prefix != null) {
+      identifiers.add(prefix.name.lexeme);
+    }
+    super.visitNamedType(node);
   }
 
   @override
@@ -1533,7 +1575,9 @@ final class _Collector extends RecursiveAstVisitor<void> {
     if (name != null) {
       _addPublic(name);
     }
+    extensionDepth++;
     super.visitExtensionDeclaration(node);
+    extensionDepth--;
   }
 
   @override
@@ -1575,6 +1619,10 @@ final class _Collector extends RecursiveAstVisitor<void> {
 
   @override
   void visitMethodDeclaration(MethodDeclaration node) {
+    final methodName = node.name.lexeme;
+    if (extensionDepth > 0 && !methodName.startsWith('_')) {
+      extensionMethods.add(methodName);
+    }
     _recordCallable(
       name: node.name.lexeme,
       node: node,

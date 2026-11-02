@@ -1,0 +1,2 @@
+PRODUCT_NAME = smoke_app
+PRODUCT_BUNDLE_IDENTIFIER = com.smoke.template

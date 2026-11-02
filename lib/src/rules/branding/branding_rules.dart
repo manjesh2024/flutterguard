@@ -1,3 +1,4 @@
+import '../../context/project_snapshot.dart';
 import '../../core/config.dart';
 import '../../core/finding.dart';
 import '../../core/severity.dart';
@@ -145,9 +146,9 @@ final class IosBundleIdentifierRule implements AuditRule {
 
 /// Reports default application names that disagree across platforms.
 ///
-/// Flavor-specific names are ignored. The remaining names are compared
-/// case-insensitively after trimming, and one finding lists every source
-/// when two or more distinct names remain.
+/// Flavor-specific names are ignored. Remaining names are compared after
+/// spaces, underscores, and hyphens are removed, and one finding lists every
+/// source when two or more distinct names remain.
 final class ApplicationNameRule implements AuditRule {
   @override
   String get id => 'FG-BRAND-003';
@@ -163,10 +164,10 @@ final class ApplicationNameRule implements AuditRule {
   AuditModule get module => AuditModule.branding;
   @override
   String get description =>
-      'Compares default, non-flavor application names across Android, iOS, and web.';
+      'Compares customer-facing display names. Flutter engine plists are ignored, Xcode variables such as PRODUCT_NAME are resolved, and flavor-specific names are not compared with the default name.';
   @override
   String get recommendation =>
-      'Use one customer-facing name, or give flavor-specific names an explicit flavor.';
+      'Use one customer-facing name. Flavor-specific names are allowed when they are declared on that flavor.';
 
   @override
   List<Finding> evaluate(RuleScope scope) {
@@ -175,7 +176,11 @@ final class ApplicationNameRule implements AuditRule {
         .toList();
     final distinct = <String>{};
     for (final name in names) {
-      distinct.add(name.value.trim().toLowerCase());
+      final canonical = canonicalDisplayName(name.value);
+      if (canonical.isEmpty) {
+        continue;
+      }
+      distinct.add(canonical);
     }
     if (distinct.length < 2) {
       return const [];

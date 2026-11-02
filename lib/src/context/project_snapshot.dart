@@ -172,11 +172,15 @@ final class SnapshotBuilder {
   ///
   /// Missing pubspec.yaml becomes PubspecInfo.empty. Paths containing
   /// `android/` that end in `.gradle` or `.gradle.kts` are parsed, and each
-  /// flavor `app_name` is recorded with that flavor name. Manifest labels
-  /// that do not start with `@` are recorded too. Plist files contribute
-  /// `CFBundleIdentifier`, `CFBundleDisplayName` or `CFBundleName`, the
-  /// arbitrary-loads flag, empty `NS*UsageDescription` strings, and parse
-  /// errors. `PRODUCT_BUNDLE_IDENTIFIER` values are read from `.pbxproj` and
+  /// flavor `app_name` is recorded with that flavor name. Main-manifest
+  /// labels, including `@string/` values resolved from `src/main/res/values`,
+  /// are recorded. Debug and profile overlays are not display names. Plist
+  /// files contribute `CFBundleIdentifier`, `CFBundleDisplayName` or
+  /// `CFBundleName` after Xcode variables such as `PRODUCT_NAME` are resolved
+  /// from `.xcconfig` and `.pbxproj`. `AppFrameworkInfo.plist` is ignored.
+  /// Unresolved variables are dropped. The arbitrary-loads flag, empty
+  /// `NS*UsageDescription` strings, and parse errors are still recorded.
+  /// `PRODUCT_BUNDLE_IDENTIFIER` values are read from `.pbxproj` and
   /// `.xcconfig` files. Bundle ids containing `$(` are dropped and the rest
   /// are sorted. `.arb` files become catalogs. `web/manifest.json` `name`
   /// and a non-empty `web/index.html` title become brand names. l10n.yaml
@@ -205,6 +209,7 @@ final class SnapshotBuilder {
     final catalogs = <ArbCatalog>[];
     final bundleIds = <String>{};
     final names = <BrandName>[];
+    final buildSettings = _buildSettings(files);
     var arbitraryLoads = false;
     final emptyPrivacy = <String>[];
     final plistErrors = <String>[];
@@ -229,8 +234,11 @@ final class SnapshotBuilder {
       } else if (path.endsWith('AndroidManifest.xml')) {
         final manifest = parseManifest(path, text);
         manifests.add(manifest);
-        if (manifest.label != null && !manifest.label!.startsWith('@')) {
-          names.add(BrandName(source: path, value: manifest.label!));
+        if (isMainAndroidManifest(path)) {
+          final label = _androidDisplayName(manifest.label, files);
+          if (label != null) {
+            names.add(BrandName(source: path, value: label));
+          }
         }
       } else if (path.endsWith('.plist')) {
         final plist = parsePlist(text);
@@ -241,10 +249,19 @@ final class SnapshotBuilder {
         if (bundle != null && !bundle.contains(r'$(')) {
           bundleIds.add(bundle);
         }
-        final display =
-            plist.string('CFBundleDisplayName') ?? plist.string('CFBundleName');
-        if (display != null) {
-          names.add(BrandName(source: path, value: display));
+        if (!isEngineFrameworkPlist(path)) {
+          final display =
+              plist.string('CFBundleDisplayName') ??
+              plist.string('CFBundleName');
+          final resolved = display == null
+              ? null
+              : resolveBuildVariables(
+                  display,
+                  buildSettings[_platformOf(path)],
+                );
+          if (resolved != null && resolved.isNotEmpty) {
+            names.add(BrandName(source: path, value: resolved));
+          }
         }
         final ats = plist.values['NSAppTransportSecurity'];
         if (ats is Map && ats['NSAllowsArbitraryLoads'] == true) {
@@ -377,4 +394,136 @@ bool hasPrefix(FileIndex files, String prefix) {
         file.relativePosix == prefix ||
         file.relativePosix.startsWith(normalized),
   );
+}
+
+/// Whether [path] is the Flutter engine plist, not the app's Info.plist.
+///
+/// `ios/Flutter/AppFrameworkInfo.plist` sets `CFBundleName` to `App` for the
+/// engine. That string is not the customer-facing display name.
+bool isEngineFrameworkPlist(String path) {
+  final normalized = path.replaceAll('\\', '/');
+  return normalized.endsWith('/Flutter/AppFrameworkInfo.plist') ||
+      normalized.endsWith('/AppFrameworkInfo.plist');
+}
+
+/// Replaces `$(NAME)` and `${NAME}` using [settings].
+///
+/// Returns null when a variable has no literal value. A value with no
+/// variable is returned trimmed. Resolution stops after six substitutions.
+String? resolveBuildVariables(String raw, Map<String, String>? settings) {
+  var value = raw.trim();
+  if (value.isEmpty) {
+    return null;
+  }
+  final pattern = RegExp(r'\$\{([A-Za-z0-9_]+)\}|\$\(([A-Za-z0-9_]+)\)');
+  for (var attempt = 0; attempt < 6; attempt++) {
+    final match = pattern.firstMatch(value);
+    if (match == null) {
+      return value;
+    }
+    final key = match.group(1) ?? match.group(2)!;
+    final replacement = settings?[key];
+    if (replacement == null || replacement.contains(r'$')) {
+      return null;
+    }
+    value = value.replaceRange(match.start, match.end, replacement).trim();
+  }
+  return pattern.hasMatch(value) ? null : value;
+}
+
+/// Customer-facing form of [value] for display-name comparison.
+///
+/// Lowercases and removes spaces, underscores, and hyphens so `Smoke App`
+/// and `smoke_app` compare as the same name.
+String canonicalDisplayName(String value) {
+  return value.trim().toLowerCase().replaceAll(RegExp(r'[\s_\-]+'), '');
+}
+
+Map<String, Map<String, String>> _buildSettings(FileIndex files) {
+  final assignment = RegExp(
+    r'^\s*([A-Za-z0-9_]+)\s*=\s*([^;\n]+)',
+    multiLine: true,
+  );
+  final collected = <String, Map<String, List<String>>>{};
+  for (final file in files.files) {
+    final text = file.text;
+    if (text == null) {
+      continue;
+    }
+    final path = file.relativePosix;
+    if (!path.endsWith('.xcconfig') && !path.endsWith('.pbxproj')) {
+      continue;
+    }
+    final platform = _platformOf(path);
+    if (platform == null) {
+      continue;
+    }
+    final bucket = collected.putIfAbsent(platform, () => {});
+    for (final match in assignment.allMatches(text)) {
+      final key = match.group(1)!;
+      var setting = match.group(2)!.trim();
+      if (setting.endsWith(';')) {
+        setting = setting.substring(0, setting.length - 1).trim();
+      }
+      setting = setting.replaceAll('"', '');
+      if (setting.isEmpty) {
+        continue;
+      }
+      bucket.putIfAbsent(key, () => []).add(setting);
+    }
+  }
+  return {
+    for (final entry in collected.entries)
+      entry.key: {
+        for (final setting in entry.value.entries)
+          setting.key: _preferLiteral(setting.value),
+      },
+  };
+}
+
+String _preferLiteral(List<String> values) {
+  for (final value in values) {
+    if (!value.contains(r'$')) {
+      return value;
+    }
+  }
+  return values.first;
+}
+
+String? _platformOf(String path) {
+  final normalized = path.replaceAll('\\', '/');
+  final slash = normalized.indexOf('/');
+  if (slash <= 0) {
+    return null;
+  }
+  return normalized.substring(0, slash);
+}
+
+String? _androidDisplayName(String? label, FileIndex files) {
+  if (label == null) {
+    return null;
+  }
+  final trimmed = label.trim();
+  if (trimmed.isEmpty ||
+      trimmed.startsWith('@') && !trimmed.startsWith('@string/')) {
+    return null;
+  }
+  if (!trimmed.startsWith('@string/')) {
+    return trimmed;
+  }
+  final key = trimmed.substring('@string/'.length);
+  for (final file in files.files) {
+    final path = file.relativePosix.replaceAll('\\', '/');
+    final text = file.text;
+    if (text == null || !path.endsWith('/src/main/res/values/strings.xml')) {
+      continue;
+    }
+    final match = RegExp('<string\\s+name="$key">([^<]*)</string>')
+        .firstMatch(text);
+    final value = match?.group(1)?.trim();
+    if (value != null && value.isNotEmpty) {
+      return value;
+    }
+  }
+  return null;
 }

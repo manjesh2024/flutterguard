@@ -383,10 +383,10 @@ final class UnusedImportRule implements AuditRule {
   AuditModule get module => AuditModule.codeQuality;
   @override
   String get description =>
-      'Reports unused imports from the AST. Only prefix, show, and redundant dart:core imports are auto-fixable.';
+      'Reports unused imports from the Dart analyzer AST. Constructor names and extension methods count as references. Only prefix, show, and redundant dart:core imports are auto-fixable.';
   @override
   String get recommendation =>
-      'Remove the import. Bare imports that may exist for extensions are reported and not auto-fixed.';
+      'Remove the import when it is unused. Imports that may exist only for an extension are not auto-fixed.';
 
   @override
   List<Finding> evaluate(RuleScope scope) {
