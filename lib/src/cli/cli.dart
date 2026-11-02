@@ -15,12 +15,20 @@ import '../reporting/formatters.dart';
 import '../rules/registry.dart';
 import '../toolchain/toolchain.dart';
 
+/// Destination for CLI stdout and stderr text.
 abstract interface class CliIo {
+  /// Writes [text] to the normal output stream. Does not add a newline.
   void writeOut(String text);
+
+  /// Writes [text] to the error stream. Does not add a newline.
   void writeErr(String text);
 }
 
+/// [CliIo] that writes to the process stdout and stderr.
 final class StdioCli implements CliIo {
+  /// Creates a CLI bound to the current process streams.
+  StdioCli();
+
   @override
   void writeOut(String text) => io.stdout.write(text);
 
@@ -28,8 +36,15 @@ final class StdioCli implements CliIo {
   void writeErr(String text) => io.stderr.write(text);
 }
 
+/// [CliIo] that records output in memory for tests and embedded runs.
 final class BufferCli implements CliIo {
+  /// Creates an empty buffer for stdout and stderr text.
+  BufferCli();
+
+  /// Text passed to [writeOut], including any newlines the caller supplied.
   final out = StringBuffer();
+
+  /// Text passed to [writeErr], including any newlines the caller supplied.
   final err = StringBuffer();
 
   @override
@@ -39,11 +54,34 @@ final class BufferCli implements CliIo {
   void writeErr(String text) => err.write(text);
 }
 
+/// Command-line entry point for scan, init, rules, baseline, fix, and doctor.
+///
+/// ```dart
+/// final exitCode = await FlutterGuardCli(ioSink: BufferCli()).run(
+///   const ['--offline'],
+/// );
+/// ```
+///
+/// With no command, or with a path and flags that are not a known command,
+/// [run] scans the project. `version` and `--version` print the executable
+/// name and package version. `help`, `--help`, and `-h` print [rootHelp].
 final class FlutterGuardCli {
+  /// Creates a CLI that writes through [ioSink].
+  ///
+  /// When [ioSink] is omitted, output goes to a [StdioCli].
   FlutterGuardCli({CliIo? ioSink}) : ioSink = ioSink ?? StdioCli();
 
+  /// Stream used for normal output and errors.
   final CliIo ioSink;
 
+  /// Parses [args] and runs the selected command.
+  ///
+  /// Returns a process exit code. A FlutterGuard exception is written to
+  /// [ioSink] and its exit code is returned. An args-parser exception returns
+  /// the usage exit code. Any other error is written as `FlutterGuard failed`
+  /// and returns the failure exit code. `init` can write the config file,
+  /// scan can write reports, `baseline` writes the baseline file, and `fix`
+  /// can edit source and write a backup.
   Future<int> run(List<String> args) async {
     try {
       return await _run(args);
@@ -397,13 +435,24 @@ final class FlutterGuardCli {
   }
 }
 
+/// File wrapper used by `init` to test existence and write the config template.
 final class FilePath {
+  /// Binds this wrapper to [path]. Does not touch the filesystem.
   FilePath(this.path);
+
+  /// Filesystem path passed to the constructor.
   final String path;
+
+  /// Whether a file exists at [path].
   bool get exists => io.File(path).existsSync();
+
+  /// Replaces the file at [path] with [contents].
+  ///
+  /// Does not create missing parent directories.
   void write(String contents) => io.File(path).writeAsStringSync(contents);
 }
 
+/// Help text for the top-level command list.
 const String rootHelp = '''
 FlutterGuard audits a Flutter project in one command.
 
@@ -421,6 +470,7 @@ Run flutterguard with no arguments inside a Flutter project to scan, write
 reports, evaluate the quality gate, and print a summary.
 ''';
 
+/// Help text for a scan invoked with no subcommand.
 const String scanHelp = '''
 Usage: flutterguard [path] [--config file] [--offline]
 
@@ -428,18 +478,21 @@ Discovers the Flutter project, runs every enabled module, writes
 build/flutterguard reports, and returns 0 when the quality gate passes.
 ''';
 
+/// Help text for `flutterguard init`.
 const String initHelp = '''
 Usage: flutterguard init [path] [--force]
 
 Writes .flutterguard.yaml. Existing files are kept unless --force is set.
 ''';
 
+/// Help text for `flutterguard rules list` and `rules explain`.
 const String rulesHelp = '''
 Usage:
   flutterguard rules list
   flutterguard rules explain FG-ARCH-001
 ''';
 
+/// Help text for `flutterguard baseline create` and `baseline update`.
 const String baselineHelp = '''
 Usage:
   flutterguard baseline create [--force]
@@ -449,6 +502,7 @@ Both commands scan without modifying source and write the baseline file from
 the active configuration.
 ''';
 
+/// Help text for `flutterguard fix`, including dry-run and revert.
 const String fixHelp = '''
 Usage:
   flutterguard fix --dry-run
@@ -459,6 +513,7 @@ The scan itself never writes source. fix only applies deterministic import
 removals and stores a backup under .flutterguard/backups.
 ''';
 
+/// Help text for `flutterguard doctor`.
 const String doctorHelp = '''
 Usage: flutterguard doctor [path]
 

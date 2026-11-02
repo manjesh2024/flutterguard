@@ -8,25 +8,47 @@ import '../core/config.dart';
 import '../discovery/discovery.dart';
 import 'file_index.dart';
 
+/// A display name read from a platform, plist, or web file.
 final class BrandName {
+  /// Creates a brand name. source and value are required.
+  ///
+  /// flavor defaults to null and is set when value comes from an Android
+  /// product flavor.
   const BrandName({required this.source, required this.value, this.flavor});
 
+  /// Project-relative file that contained the name.
   final String source;
+
+  /// Display string as read from source.
   final String value;
+
+  /// Android flavor name when value came from a flavor `app_name`.
+  ///
+  /// Null for manifest, plist, and web names. Defaults to null.
   final String? flavor;
 }
 
+/// Localization paths from l10n.yaml, or a marker that the file is absent.
 final class L10nConfig {
+  /// Creates a localization config. Every argument is required.
   const L10nConfig({
     required this.present,
     required this.arbDir,
     required this.templateArbFile,
   });
 
+  /// True when l10n.yaml was found in the file index.
   final bool present;
+
+  /// Trimmed `arb-dir` value, or null when that key was not matched.
   final String? arbDir;
+
+  /// Trimmed `template-arb-file` value, or null when that key was not matched.
   final String? templateArbFile;
 
+  /// Config used when l10n.yaml is not in the file index.
+  ///
+  /// present is false and both path fields are null.
   static const absent = L10nConfig(
     present: false,
     arbDir: null,
@@ -34,7 +56,17 @@ final class L10nConfig {
   );
 }
 
+/// Immutable facts collected from one discovered Flutter project.
+///
+/// ```dart
+/// final snapshot = const SnapshotBuilder().build(
+///   project: project,
+///   config: config,
+/// );
+/// snapshot.hasPathPrefix('android');
+/// ```
 final class ProjectSnapshot {
+  /// Creates a snapshot. Every argument is required and is stored unchanged.
   const ProjectSnapshot({
     required this.project,
     required this.files,
@@ -53,22 +85,66 @@ final class ProjectSnapshot {
     required this.plistErrors,
   });
 
+  /// Discovered project this snapshot describes, including its root path.
   final DiscoveredProject project;
+
+  /// Files indexed under the project root.
   final FileIndex files;
+
+  /// Parsed Dart files and import cycles for the package.
   final DartIndex dartIndex;
+
+  /// Parsed pubspec.yaml, or PubspecInfo.empty when that file was missing.
   final PubspecInfo pubspec;
+
+  /// Gradle and Kotlin DSL files parsed from paths under `android/`.
   final List<GradleModel> gradleFiles;
+
+  /// Parsed `AndroidManifest.xml` files.
   final List<ManifestInfo> manifests;
+
+  /// Bundle ids from plists, pbxproj files, and xcconfig files.
+  ///
+  /// The builder omits values that contain `$(` and sorts the rest.
   final List<String> bundleIdentifiers;
+
+  /// Display names from Gradle flavors, manifests, plists, and web files.
   final List<BrandName> names;
+
+  /// Catalogs parsed from `.arb` files.
   final List<ArbCatalog> arbCatalogs;
+
+  /// l10n.yaml settings, or L10nConfig.absent when that file was missing.
   final L10nConfig l10n;
+
+  /// Packages pinned in pubspec.lock.
+  ///
+  /// The builder uses an empty list when the lockfile is missing or reading
+  /// it throws FormatException.
   final List<LockedPackage> lockedPackages;
+
+  /// True when a plist sets `NSAllowsArbitraryLoads` inside
+  /// `NSAppTransportSecurity`.
   final bool arbitraryLoads;
+
+  /// Plist keys that start with `NS`, end with `UsageDescription`, and hold
+  /// a string that is empty after trimming.
   final List<String> emptyPrivacyKeys;
+
+  /// Platform roots that contain indexed files.
+  ///
+  /// The builder adds `android`, `ios`, `web`, `windows`, `macos`, and
+  /// `linux` when those directories are present.
   final Set<String> platforms;
+
+  /// Plist failures formatted as `path: message`.
   final List<String> plistErrors;
 
+  /// Whether an indexed path equals prefix or lies under that directory.
+  ///
+  /// When prefix does not already end with `/`, a slash is appended before
+  /// the prefix test. Returns true on the first match and false when no
+  /// indexed path matches.
   bool hasPathPrefix(String prefix) {
     final normalized = prefix.endsWith('/') ? prefix : '$prefix/';
     return files.files.any(
@@ -78,14 +154,36 @@ final class ProjectSnapshot {
     );
   }
 
+  /// Whether an indexed relative path is exactly relative.
+  ///
+  /// Returns false when no file has that path. The comparison is exact and
+  /// does not add a trailing slash.
   bool containsRelative(String relative) {
     return files.files.any((file) => file.relativePosix == relative);
   }
 }
 
+/// Builds a ProjectSnapshot by indexing a project and parsing known files.
 final class SnapshotBuilder {
+  /// Creates a builder that keeps no configuration of its own.
   const SnapshotBuilder();
 
+  /// Indexes project.rootPath with config and returns the parsed snapshot.
+  ///
+  /// Missing pubspec.yaml becomes PubspecInfo.empty. Paths containing
+  /// `android/` that end in `.gradle` or `.gradle.kts` are parsed, and each
+  /// flavor `app_name` is recorded with that flavor name. Manifest labels
+  /// that do not start with `@` are recorded too. Plist files contribute
+  /// `CFBundleIdentifier`, `CFBundleDisplayName` or `CFBundleName`, the
+  /// arbitrary-loads flag, empty `NS*UsageDescription` strings, and parse
+  /// errors. `PRODUCT_BUNDLE_IDENTIFIER` values are read from `.pbxproj` and
+  /// `.xcconfig` files. Bundle ids containing `$(` are dropped and the rest
+  /// are sorted. `.arb` files become catalogs. `web/manifest.json` `name`
+  /// and a non-empty `web/index.html` title become brand names. l10n.yaml
+  /// supplies arb-dir and template-arb-file when present. A missing
+  /// pubspec.lock, or a FormatException while reading it, yields an empty
+  /// package list. Walking the tree reads the filesystem and can throw
+  /// FileSystemException.
   ProjectSnapshot build({
     required DiscoveredProject project,
     required FlutterGuardConfig config,
@@ -267,6 +365,11 @@ String? _text(FileIndex files, String relative) {
   return null;
 }
 
+/// Whether files contains prefix itself or a path under that directory.
+///
+/// A match is a relative path equal to prefix or starting with `prefix/`
+/// with the slash always appended, including when prefix already ends in
+/// `/`. Returns false when nothing matches.
 bool hasPrefix(FileIndex files, String prefix) {
   final normalized = '$prefix/';
   return files.files.any(

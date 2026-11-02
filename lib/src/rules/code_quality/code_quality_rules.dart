@@ -4,6 +4,10 @@ import '../../core/finding.dart';
 import '../../core/severity.dart';
 import '../rule.dart';
 
+/// Reports methods whose cyclomatic complexity is above the configured limit.
+///
+/// The limit is `codeQuality.complexityThreshold`. Generated files are
+/// skipped. A method whose complexity equals the threshold is not reported.
 final class ComplexityRule implements AuditRule {
   @override
   String get id => 'FG-QUAL-001';
@@ -51,6 +55,10 @@ final class ComplexityRule implements AuditRule {
   }
 }
 
+/// Reports classes longer than `codeQuality.classLineThreshold`.
+///
+/// Generated files are skipped. Length is the line span already recorded on
+/// the class. A class whose length equals the threshold is not reported.
 final class LargeClassRule implements AuditRule {
   @override
   String get id => 'FG-QUAL-002';
@@ -98,6 +106,10 @@ final class LargeClassRule implements AuditRule {
   }
 }
 
+/// Reports methods longer than `codeQuality.methodLineThreshold`.
+///
+/// Generated files are skipped. A method whose length equals the threshold
+/// is not reported.
 final class LargeMethodRule implements AuditRule {
   @override
   String get id => 'FG-QUAL-003';
@@ -145,6 +157,9 @@ final class LargeMethodRule implements AuditRule {
   }
 }
 
+/// Reports `TODO`, `FIXME`, `HACK`, and `XXX` comments in non-generated Dart.
+///
+/// Each comment tag recorded by the Dart index becomes one finding.
 final class TodoRule implements AuditRule {
   @override
   String get id => 'FG-QUAL-004';
@@ -185,6 +200,10 @@ final class TodoRule implements AuditRule {
   }
 }
 
+/// Reports `print` and `debugPrint` calls found in the AST.
+///
+/// Generated files are skipped. The finding names the callee and the
+/// enclosing declaration when one was recorded.
 final class DebugPrintRule implements AuditRule {
   @override
   String get id => 'FG-QUAL-005';
@@ -226,6 +245,10 @@ final class DebugPrintRule implements AuditRule {
   }
 }
 
+/// Reports catch clauses whose block contains no statements.
+///
+/// Generated files are skipped. Catches that already contain a statement,
+/// including a rethrow, are left alone.
 final class EmptyCatchRule implements AuditRule {
   @override
   String get id => 'FG-QUAL-006';
@@ -271,6 +294,13 @@ final class EmptyCatchRule implements AuditRule {
   }
 }
 
+/// Heuristic for async bodies that never await and for bare future calls.
+///
+/// An `async` function with no await is reported as a definite finding.
+/// A call is also reported when its name is a project function declared to
+/// return `Future`, the call is not `unawaited`, and the name is visible to
+/// the file. Return types come from declarations, not from inference.
+/// Generated files are skipped.
 final class SuspiciousAsyncRule implements AuditRule {
   @override
   String get id => 'FG-QUAL-007';
@@ -332,6 +362,12 @@ final class SuspiciousAsyncRule implements AuditRule {
   }
 }
 
+/// Reports unused imports found in the AST.
+///
+/// Prefix, show, and redundant `dart:core` imports are marked auto-fixable
+/// and carry the `remove-unused-import` fix id plus the original line text.
+/// Other unused imports are reported as heuristic findings and are not given
+/// a fix. Generated files are skipped.
 final class UnusedImportRule implements AuditRule {
   @override
   String get id => 'FG-QUAL-008';
@@ -379,6 +415,10 @@ final class UnusedImportRule implements AuditRule {
   }
 }
 
+/// Reports syntax errors found while parsing Dart files.
+///
+/// Generated files are included. Each parser diagnostic becomes one finding
+/// at the recorded line and column.
 final class ParseErrorRule implements AuditRule {
   @override
   String get id => 'FG-QUAL-009';
@@ -420,6 +460,10 @@ final class ParseErrorRule implements AuditRule {
   }
 }
 
+/// Reports `flutterguard:ignore` comments that omit a rule id or a reason.
+///
+/// Comments the parser already marked valid are skipped. An invalid comment
+/// is not applied as a suppression.
 final class InvalidSuppressionRule implements AuditRule {
   @override
   String get id => 'FG-SUP-001';
@@ -467,6 +511,7 @@ Iterable<DartFileFacts> _sources(RuleScope scope) {
   return scope.project.dartIndex.files.where((file) => !file.generated);
 }
 
+/// Built-in code-quality and suppression rules, in a stable evaluation order.
 List<AuditRule> codeQualityRules() => [
   ComplexityRule(),
   LargeClassRule(),

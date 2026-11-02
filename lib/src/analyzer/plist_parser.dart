@@ -1,19 +1,42 @@
 import 'package:xml/xml.dart';
 
+/// Values from the first `dict` in a property list, plus any parse error.
 final class PlistInfo {
+  /// Creates a plist model. Both arguments are required.
+  ///
+  /// error is null when a `dict` was decoded.
   const PlistInfo({required this.values, required this.error});
 
+  /// Keys from the first `dict` mapped to decoded values.
+  ///
+  /// Strings and unrecognized tags are trimmed text. `true` and `false`
+  /// become bools. `integer` becomes an int, or null when it does not parse.
+  /// Nested `dict` elements become maps.
   final Map<String, Object?> values;
+
+  /// Null when a `dict` was decoded. Otherwise `Info.plist has no dict.` or
+  /// the XmlException message.
   final String? error;
 
+  /// String stored for key, or null when the key is missing or the value is
+  /// not a string.
   String? string(String key) {
     final value = values[key];
     return value is String ? value : null;
   }
 
+  /// True only when key is stored as the boolean true.
+  ///
+  /// Missing keys, false, and every non-bool value return false.
   bool boolValue(String key) => values[key] == true;
 }
 
+/// Parses plist XML and reads the first `dict` in document order.
+///
+/// Each `key` element is paired with the following element. A document with
+/// no `dict` returns an empty map and error `Info.plist has no dict.`.
+/// Malformed XML does not throw: the map is empty and error is the
+/// XmlException message.
 PlistInfo parsePlist(String text) {
   try {
     final document = XmlDocument.parse(text);

@@ -1,6 +1,11 @@
 import 'package:xml/xml.dart';
 
+/// Package, permissions, and export facts from one AndroidManifest.xml.
 final class ManifestInfo {
+  /// Creates a manifest model. Every argument is required.
+  ///
+  /// error is null after a successful parse. A failed parse stores the
+  /// parser message and leaves the other fields null, false, or empty.
   const ManifestInfo({
     required this.path,
     required this.packageName,
@@ -12,16 +17,46 @@ final class ManifestInfo {
     required this.error,
   });
 
+  /// Project-relative path of the manifest.
   final String path;
+
+  /// `package` attribute on the root element, or null when it is absent.
   final String? packageName;
+
+  /// `label` attribute of `application`, or null when that element or
+  /// attribute is absent.
   final String? label;
+
+  /// True when `application` sets `debuggable` to the string `true`.
   final bool debuggable;
+
+  /// True when `application` sets `usesCleartextTraffic` to the string
+  /// `true`.
   final bool cleartext;
+
+  /// `name` values of top-level `uses-permission` elements.
+  ///
+  /// Permissions nested under another element are ignored. An entry without
+  /// a `name` attribute is skipped.
   final List<String> permissions;
+
+  /// Exported components under `application` that have no `intent-filter`.
+  ///
+  /// Includes `activity`, `activity-alias`, `service`, and `receiver` whose
+  /// `exported` attribute is `true`. Each entry is that element's `name`, or
+  /// the element name when `name` is absent.
   final List<String> exportedActivitiesWithoutIntent;
+
+  /// XmlException message when the document cannot be parsed. Null after a
+  /// successful parse.
   final String? error;
 }
 
+/// Parses the Android manifest at path.
+///
+/// Attributes are matched by local name, so an `android:` prefix does not
+/// matter. Malformed XML does not throw: error is set to the XmlException
+/// message and the other fields are left empty or false.
 ManifestInfo parseManifest(String path, String text) {
   try {
     final document = XmlDocument.parse(text);

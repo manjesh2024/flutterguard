@@ -7,7 +7,12 @@ import '../core/config.dart';
 import '../core/glob.dart';
 import '../core/safe_path.dart';
 
+/// One file recorded under the project root.
 final class IndexedFile {
+  /// Creates an index entry. Every argument is required.
+  ///
+  /// text is null for a binary file or a text file over the size limit.
+  /// tooLarge is true only in that oversized text case.
   const IndexedFile({
     required this.relativePosix,
     required this.size,
@@ -15,20 +20,46 @@ final class IndexedFile {
     required this.tooLarge,
   });
 
+  /// Path relative to the project root, using `/` separators.
   final String relativePosix;
+
+  /// File length in bytes at the time it was indexed.
   final int size;
+
+  /// UTF-8 contents, with malformed sequences allowed.
+  ///
+  /// Null when the file was treated as binary or was larger than the text
+  /// limit.
   final String? text;
+
+  /// True when text was omitted because the file exceeds the text limit.
+  ///
+  /// Binary files stay false even when they are large.
   final bool tooLarge;
 
+  /// True when text was loaded.
   bool get isText => text != null;
 }
 
+/// Files accepted by the include and exclude globs, plus paths refused for
+/// leaving the project root.
 final class FileIndex {
+  /// Creates an index. Both arguments are required and are stored as given.
+  ///
+  /// This constructor does not sort either list.
   const FileIndex({required this.files, required this.escapedSymlinks});
 
+  /// Indexed files. FileIndexer sorts these by relative path.
   final List<IndexedFile> files;
+
+  /// Relative paths left out of files because they escaped the root.
+  ///
+  /// Includes symlinks whose target is outside the root or could not be
+  /// resolved, and files whose resolved path is outside the root. FileIndexer
+  /// sorts this list.
   final List<String> escapedSymlinks;
 
+  /// First file whose relative path ends with suffix, or null when none do.
   IndexedFile? firstEnding(String suffix) {
     for (final file in files) {
       if (file.relativePosix.endsWith(suffix)) {
@@ -38,6 +69,9 @@ final class FileIndex {
     return null;
   }
 
+  /// Every file whose relative path ends with suffix, in list order.
+  ///
+  /// Returns an empty list when nothing matches.
   List<IndexedFile> ending(String suffix) {
     return [
       for (final file in files)
@@ -46,11 +80,29 @@ final class FileIndex {
   }
 }
 
+/// Walks a project tree and builds a FileIndex.
 final class FileIndexer {
+  /// Creates an indexer. The filesystem is read only when index is called.
   const FileIndexer();
 
+  /// Largest file size, in bytes, that is decoded as text.
+  ///
+  /// A non-binary file whose size is greater than 1500000 is stored with
+  /// text null and tooLarge true. A file of exactly this size is still read.
   static const int maxTextBytes = 1500000;
 
+  /// Indexes projectRoot using the include and exclude globs in config.
+  ///
+  /// Symlinks are not followed. Directory names in skippedDirectoryNames are
+  /// skipped, as are directories whose relative path matches an exclude glob.
+  /// A file is kept when its relative path matches an include glob and no
+  /// exclude glob. Paths that start with `..` are ignored. A symlink or
+  /// resolved path outside the root is recorded in escapedSymlinks and not
+  /// read. Known binary extensions, and files whose first 8000 bytes contain
+  /// a NUL, are stored without text. Other files at or under maxTextBytes are
+  /// decoded as UTF-8 with malformed bytes allowed. Both result lists are
+  /// sorted. Listing or reading a file can throw FileSystemException; a
+  /// symlink that fails to resolve is recorded instead of thrown.
   FileIndex index({
     required String projectRoot,
     required FlutterGuardConfig config,

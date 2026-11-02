@@ -88,6 +88,12 @@ final class _ComplexityCounter extends RecursiveAstVisitor<void> {
   }
 }
 
+/// Inclusive number of source lines occupied by node.
+///
+/// lineOf maps a source offset to a line number and is called twice: once
+/// for `node.offset`, and once for the last character of node. An empty node
+/// uses `node.offset` for both. The result is `end - start + 1`, or 1 when
+/// that difference is less than 1. Exceptions thrown by lineOf propagate.
 int lineSpan(AstNode node, int Function(int offset) lineOf) {
   final start = lineOf(node.offset);
   final end = lineOf(node.end - 1 < node.offset ? node.offset : node.end - 1);

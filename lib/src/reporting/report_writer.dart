@@ -8,7 +8,9 @@ import '../core/safe_path.dart';
 import 'formatters.dart';
 import 'html_reporter.dart';
 
+/// Paths of the reports written for one scan, relative to the project.
 final class WrittenReports {
+  /// Stores the report directory and the four standard report paths.
   const WrittenReports({
     required this.directory,
     required this.indexHtml,
@@ -17,13 +19,30 @@ final class WrittenReports {
     required this.reportSarif,
   });
 
+  /// Configured report directory, not an absolute path.
   final String directory;
+
+  /// Relative path of `index.html` inside [directory].
   final String indexHtml;
+
+  /// Relative path of `report.json` inside [directory].
   final String reportJson;
+
+  /// Relative path of `report.md` inside [directory].
   final String reportMarkdown;
+
+  /// Relative path of `report.sarif` inside [directory].
   final String reportSarif;
 }
 
+/// Writes HTML, JSON, Markdown, and SARIF reports under the configured directory.
+///
+/// [rootPath] is the project root. The directory comes from [config] and is
+/// refused when it escapes the project, which throws a configuration
+/// exception. Creates the directory and overwrites `index.html`,
+/// `report.json`, `report.md`, and `report.sarif`. When [config] enables
+/// history, the same four files are also copied under
+/// `history/<utc-timestamp>`. Returned paths stay relative to the project.
 WrittenReports writeReports({
   required String rootPath,
   required FlutterGuardConfig config,
@@ -71,6 +90,11 @@ WrittenReports writeReports({
   );
 }
 
+/// Opens [relativeHtml] under [rootPath] with the platform file opener.
+///
+/// macOS runs `open`, Windows runs `cmd /c start`, and other platforms run
+/// `xdg-open`. The returned future completes when that process exits. The
+/// file is not checked for existence before the opener is started.
 Future<void> openHtmlReport(String rootPath, String relativeHtml) async {
   final full = p.join(rootPath, relativeHtml);
   if (Platform.isMacOS) {

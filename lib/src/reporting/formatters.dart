@@ -10,7 +10,12 @@ import '../network/signals.dart';
 import '../quality_gate/quality_gate.dart';
 import '../suppression/suppression.dart';
 
+/// Immutable result of one scan, ready for every report format.
 final class ScanReport {
+  /// Stores the scan clock, toolchain, projects, findings, and gate result.
+  ///
+  /// Every argument is retained as given. [flutterVersion] may be null when
+  /// Flutter was not found.
   const ScanReport({
     required this.generatedAt,
     required this.dartVersion,
@@ -24,17 +29,39 @@ final class ScanReport {
     required this.warnings,
   });
 
+  /// Time the report was produced. Renderers print it in UTC.
   final DateTime generatedAt;
+
+  /// Dart SDK version string captured for this scan.
   final String dartVersion;
+
+  /// Flutter framework version, or null when Flutter was not found.
   final String? flutterVersion;
+
+  /// Projects included in the scan.
   final List<ProjectSnapshot> projects;
+
+  /// Findings that remain after suppression.
   final List<Finding> findings;
+
+  /// Findings removed by config or inline suppressions, with reasons.
   final List<SuppressedFinding> suppressed;
+
+  /// Baseline split for this scan, including a disabled comparison.
   final BaselineComparison baseline;
+
+  /// Quality-gate pass or fail result and its reasons.
   final QualityGateResult gate;
+
+  /// Outdated-package and vulnerability status collected for this scan.
   final ExternalSignals signals;
+
+  /// Non-finding warnings collected while scanning.
   final List<String> warnings;
 
+  /// Count of [findings] for each severity name, including zeroes.
+  ///
+  /// Keys follow report severity order. A severity with no findings is 0.
   Map<String, int> get bySeverity {
     final counts = {
       for (final severity in Severity.reportOrder) severity.name: 0,
@@ -49,6 +76,9 @@ final class ScanReport {
     return counts;
   }
 
+  /// Count of [findings] by category name, with keys sorted alphabetically.
+  ///
+  /// Categories that do not appear in [findings] are omitted.
   Map<String, int> get byCategory {
     final counts = <String, int>{};
     for (final finding in findings) {
@@ -59,6 +89,12 @@ final class ScanReport {
   }
 }
 
+/// JSON report for [report], indented with two spaces and ending in a newline.
+///
+/// Includes tool identity, projects, severity and category counts, findings,
+/// baseline, suppressions, the quality gate, network status, and warnings.
+/// Secret-shaped text is redacted before the string is returned. The document
+/// states that no project score is calculated.
 String renderJson(ScanReport report) {
   final document = <String, Object?>{
     'schemaVersion': reportSchemaVersion,
@@ -102,6 +138,12 @@ String renderJson(ScanReport report) {
   );
 }
 
+/// Markdown report for [report].
+///
+/// Sections cover projects, severity counts, categories, a finding table with
+/// recommendation and heuristic notes, baseline totals, suppressions, the
+/// quality gate, and network status. Table cells escape `|` and newlines.
+/// Secret-shaped text is redacted before the string is returned.
 String renderMarkdown(ScanReport report) {
   final buffer = StringBuffer()
     ..writeln('# FlutterGuard report')
@@ -190,6 +232,12 @@ String renderMarkdown(ScanReport report) {
   return redactSecrets(buffer.toString());
 }
 
+/// SARIF 2.1.0 document for [report].
+///
+/// One run lists each distinct rule id from [report], sorted by id, and one
+/// result per finding. Result level comes from the finding severity. A
+/// location is omitted when a finding has no path. Secret-shaped text is
+/// redacted before the string is returned.
 String renderSarif(ScanReport report) {
   final rules = <String, Finding>{};
   for (final finding in report.findings) {
@@ -251,6 +299,13 @@ String renderSarif(ScanReport report) {
   );
 }
 
+/// Short terminal summary for [report].
+///
+/// Prints tool and toolchain versions, project names, severity counts,
+/// baseline totals when the baseline is enabled, the suppression count when
+/// any were applied, the quality gate, and one line per finding. An empty
+/// finding list prints `No findings.`. Secret-shaped text is redacted before
+/// the string is returned.
 String renderTerminal(ScanReport report) {
   final buffer = StringBuffer()
     ..writeln('$toolName $packageVersion')

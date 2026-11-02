@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.2
+
+- Document the public Dart API and enforce `public_member_api_docs`.
+- Describe the published `dart pub global activate` install path, including `$HOME/.pub-cache/bin` on `PATH`.
+
 ## 0.1.1
 
 - Document that `flutterguard_audit` 0.1.0 is published and that `$HOME/.pub-cache/bin` must be on `PATH` before `flutterguard` runs.

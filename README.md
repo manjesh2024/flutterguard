@@ -16,7 +16,7 @@ The pub.dev package is `flutterguard_audit`. The terminal command is `fluttergua
 
 ## Installation
 
-`flutterguard_audit` 0.1.0 is published on [pub.dev](https://pub.dev/packages/flutterguard_audit).
+`flutterguard_audit` is published on [pub.dev](https://pub.dev/packages/flutterguard_audit). The current release is 0.1.2.
 
 ```bash
 dart pub global activate flutterguard_audit
@@ -29,7 +29,7 @@ export PATH="$PATH:$HOME/.pub-cache/bin"
 flutterguard --version
 ```
 
-The command must print `flutterguard 0.1.0`. Dart `^3.13.0` is required because the package uses analyzer 14. That matches current Flutter stable.
+The command prints `flutterguard` and the installed version. Release 0.1.2 prints `flutterguard 0.1.2`. Dart `^3.13.0` is required because the package uses analyzer 14. That matches current Flutter stable.
 
 From a checkout of this repository:
 
@@ -74,6 +74,20 @@ flutterguard doctor
 
 `flutterguard --offline` disables network-dependent checks. Those checks are already off by default.
 
+## Library
+
+Programs can run the same scan without the executable:
+
+```dart
+import 'package:flutterguard_audit/flutterguard_audit.dart';
+
+final execution = await const FlutterGuardScanner().scan(
+  ScanRequest(rootPath: '.'),
+);
+```
+
+`execution.exitCode` is `0` when the quality gate passes and `1` when it fails. `FlutterGuardConfig.defaults` is the configuration used when `.flutterguard.yaml` is absent. `loadConfig` reads a project file and throws `ConfigException` when that file is present but invalid.
+
 ## Configuration
 
 `flutterguard init` writes `.flutterguard.yaml` schema version 1. See [the configuration reference](https://github.com/manjesh2024/flutterguard/blob/main/docs/configuration.md). Unknown keys are errors. Absolute report paths and `..` segments are refused.
@@ -97,7 +111,7 @@ The CLI runs on macOS, Linux, and Windows. It can audit Android, iOS, web, Windo
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See the [license](https://github.com/manjesh2024/flutterguard/blob/main/LICENSE).
 
 ## Further reading
 

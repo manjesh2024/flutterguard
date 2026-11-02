@@ -7,7 +7,13 @@ import '../core/config.dart';
 import '../core/exceptions.dart';
 import '../core/safe_path.dart';
 
+/// One Flutter package found under a scan root.
 final class DiscoveredProject {
+  /// Creates a project named [name] at [rootPath].
+  ///
+  /// [relativePosix] is the path from the scan root, using `/` separators.
+  /// [usesFlutterSdk] is true when `flutter: sdk: flutter` appears in
+  /// dependencies or dev_dependencies.
   const DiscoveredProject({
     required this.name,
     required this.rootPath,
@@ -15,15 +21,47 @@ final class DiscoveredProject {
     required this.usesFlutterSdk,
   });
 
+  /// Package name from pubspec.yaml, or the directory name when it is absent.
   final String name;
+
+  /// Absolute normalized directory that contains pubspec.yaml.
   final String rootPath;
+
+  /// Path relative to the scan root, using `/` separators. `.` at the root.
   final String relativePosix;
+
+  /// Whether pubspec declares a Flutter SDK dependency.
+  ///
+  /// A project can still be discovered from a top-level `flutter:` section
+  /// when this is false.
   final bool usesFlutterSdk;
 }
 
+/// Finds Flutter projects under a scan root.
+///
+/// ```dart
+/// final projects = const ProjectDiscovery().discover(
+///   rootPath: rootPath,
+///   config: config,
+/// );
+/// ```
+///
+/// A Flutter project has pubspec.yaml that depends on the Flutter SDK or has
+/// a top-level `flutter:` section. Configured discovery roots are used when
+/// present. Otherwise single mode reads only the scan root, and other modes
+/// walk the tree, then add Melos package globs and pub workspace entries.
+/// Symlinks are not followed. Results are sorted by relative path.
 final class ProjectDiscovery {
+  /// Creates a discovery helper with no retained state.
   const ProjectDiscovery();
 
+  /// Returns Flutter projects under [rootPath] using [config].
+  ///
+  /// Throws a discovery exception when [rootPath] does not exist, a configured
+  /// discovery root escapes the scan path or is not a Flutter project, single
+  /// mode finds nothing, monorepo mode finds nothing, or no project remains.
+  /// [config] selects the mode, explicit roots, and walk depth. The filesystem
+  /// is only read.
   List<DiscoveredProject> discover({
     required String rootPath,
     required FlutterGuardConfig config,

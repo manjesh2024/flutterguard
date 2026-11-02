@@ -19,7 +19,18 @@ import 'exceptions.dart';
 import 'safe_path.dart';
 import 'version.dart';
 
+/// Inputs for one [FlutterGuardScanner.scan] call.
 final class ScanRequest {
+  /// Scans [rootPath] at [now], defaulting [now] to the current UTC time.
+  ///
+  /// [configPath] selects an explicit configuration file. When it is null,
+  /// the scanner looks for `.flutterguard.yaml` in [rootPath] and uses
+  /// defaults when that file is absent. [writeReports] controls whether
+  /// HTML, JSON, Markdown, and SARIF files are written. [toolchain] skips
+  /// probing the local Dart and Flutter commands when the caller already
+  /// knows them. [offline] forces network checks off for this run.
+  /// [outdatedClient] and [vulnerabilityClient] replace the process and
+  /// HTTP clients; tests use them, and production leaves them null.
   ScanRequest({
     required this.rootPath,
     this.configPath,
@@ -31,31 +42,71 @@ final class ScanRequest {
     this.vulnerabilityClient,
   }) : now = now ?? DateTime.now().toUtc();
 
+  /// Directory that contains the Flutter project or monorepo root.
   final String rootPath;
+
+  /// Explicit configuration file, or null to use the default lookup.
   final String? configPath;
+
+  /// Whether the scan writes the report directory. Defaults to true.
   final bool writeReports;
+
+  /// Timestamp stored in the report. UTC, and the current time when omitted.
   final DateTime now;
+
+  /// Precomputed Dart and Flutter versions, or null to probe the machine.
   final ToolchainInfo? toolchain;
+
+  /// When true, outdated and vulnerability clients are not called.
   final bool offline;
+
+  /// Replacement for `dart pub outdated`. Null uses the process client.
   final OutdatedClient? outdatedClient;
+
+  /// Replacement for the OSV client. Null uses the HTTP client.
   final VulnerabilityClient? vulnerabilityClient;
 }
 
+/// Report, written files, and process status from one scan.
 final class ScanExecution {
+  /// Stores [report], the optional [reports] paths, and [exitCode].
+  ///
+  /// [reports] is null when the request set `writeReports` to false.
+  /// [exitCode] is [ExitCodes.success] or [ExitCodes.gateFailed]. Usage and
+  /// runtime failures throw instead of returning this object.
   const ScanExecution({
     required this.report,
     required this.reports,
     required this.exitCode,
   });
 
+  /// In-memory scan result, including findings and the quality gate.
   final ScanReport report;
+
+  /// Paths of the files written for this scan, or null when writing was off.
   final WrittenReports? reports;
+
+  /// [ExitCodes.success] when the gate passed, otherwise [ExitCodes.gateFailed].
   final int exitCode;
 }
 
+/// Runs discovery, rules, suppression, baseline comparison, and reporting.
+///
+/// ```dart
+/// final execution = await const FlutterGuardScanner().scan(
+///   ScanRequest(rootPath: '/path/to/app', offline: true),
+/// );
+/// ```
 final class FlutterGuardScanner {
+  /// Creates a scanner with no retained state.
   const FlutterGuardScanner();
 
+  /// Scans [request] and returns the report and exit code.
+  ///
+  /// Throws [ConfigException] for a broken configuration or a baseline path
+  /// that escapes the project. Throws [DiscoveryException] when discovery
+  /// finds nothing usable. Does not modify source files. Network clients run
+  /// only when configuration enables them and [ScanRequest.offline] is false.
   Future<ScanExecution> scan(ScanRequest request) async {
     final root = SafePath(request.rootPath).rootPath;
     final config = loadConfig(rootPath: root, configPath: request.configPath);

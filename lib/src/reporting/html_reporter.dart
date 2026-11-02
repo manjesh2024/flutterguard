@@ -2,6 +2,12 @@ import '../core/redaction.dart';
 import '../core/version.dart';
 import 'formatters.dart';
 
+/// HTML document for [report].
+///
+/// Includes project metadata, severity and category counts, a findings table,
+/// new and resolved baseline items, suppressions, the quality gate, and
+/// network status. Inserted text is HTML-escaped, and secret-shaped values
+/// are redacted. No project score is included.
 String renderHtml(ScanReport report) {
   final buffer = StringBuffer()
     ..writeln('<!DOCTYPE html>')

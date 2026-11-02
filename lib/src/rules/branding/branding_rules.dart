@@ -7,9 +7,19 @@ final _placeholderId = RegExp(
   r'^(com\.example(\..*)?|com\.yourcompany\..*|your\.bundle\.identifier)$',
 );
 
+/// Whether [value] is a Flutter template application or bundle identifier.
+///
+/// After trimming, matches `com.example`, `com.example.*`,
+/// `com.yourcompany.*`, and `your.bundle.identifier`.
 bool isPlaceholderIdentifier(String value) =>
     _placeholderId.hasMatch(value.trim());
 
+/// Checks Android `applicationId` values for absence and template placeholders.
+///
+/// Projects without Android are skipped. A project with no Gradle files is
+/// reported immediately. Otherwise each id is checked with
+/// [isPlaceholderIdentifier], and Gradle files that declare no id at all are
+/// reported once.
 final class AndroidApplicationIdRule implements AuditRule {
   @override
   String get id => 'FG-BRAND-001';
@@ -78,6 +88,11 @@ final class AndroidApplicationIdRule implements AuditRule {
   }
 }
 
+/// Checks iOS bundle identifiers for absence and template placeholders.
+///
+/// Projects without iOS are skipped. An empty identifier list is one finding.
+/// Each remaining identifier that [isPlaceholderIdentifier] accepts is
+/// reported against `ios`.
 final class IosBundleIdentifierRule implements AuditRule {
   @override
   String get id => 'FG-BRAND-002';
@@ -128,6 +143,11 @@ final class IosBundleIdentifierRule implements AuditRule {
   }
 }
 
+/// Reports default application names that disagree across platforms.
+///
+/// Flavor-specific names are ignored. The remaining names are compared
+/// case-insensitively after trimming, and one finding lists every source
+/// when two or more distinct names remain.
 final class ApplicationNameRule implements AuditRule {
   @override
   String get id => 'FG-BRAND-003';
@@ -174,6 +194,12 @@ final class ApplicationNameRule implements AuditRule {
   }
 }
 
+/// Checks that each present platform ships a launcher icon or favicon file.
+///
+/// Android requires a non-empty `ic_launcher` file under a mipmap directory.
+/// iOS requires a path containing `AppIcon.appiconset`. Web requires
+/// `web/favicon.png`, reported at low severity when it is missing. Platforms
+/// that are not part of the project are skipped.
 final class LauncherIconRule implements AuditRule {
   @override
   String get id => 'FG-BRAND-004';
@@ -255,6 +281,12 @@ final class LauncherIconRule implements AuditRule {
   }
 }
 
+/// Heuristic that product flavors resolve to distinct ids and exist on iOS.
+///
+/// Gradle files with fewer than two flavors are skipped. A flavor that sets
+/// neither an application id nor a suffix is reported. Flavors that resolve
+/// to the same id are reported together. When the project also has iOS, each
+/// flavor name must appear in some path under `ios/`.
 final class FlavorBrandingRule implements AuditRule {
   @override
   String get id => 'FG-BRAND-005';
@@ -341,6 +373,11 @@ final class FlavorBrandingRule implements AuditRule {
   }
 }
 
+/// Checks that `flutter/assets` entries in `pubspec.yaml` exist on disk.
+///
+/// Paths are compared inside the project using `/` separators. An entry that
+/// ends with `/` matches any file under that prefix; every other entry must
+/// equal a project-relative path.
 final class AssetConsistencyRule implements AuditRule {
   @override
   String get id => 'FG-BRAND-006';
@@ -387,6 +424,7 @@ final class AssetConsistencyRule implements AuditRule {
   }
 }
 
+/// Built-in branding rules, in a stable evaluation order.
 List<AuditRule> brandingRules() => [
   AndroidApplicationIdRule(),
   IosBundleIdentifierRule(),

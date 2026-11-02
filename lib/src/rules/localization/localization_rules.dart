@@ -4,6 +4,11 @@ import '../../core/finding.dart';
 import '../../core/severity.dart';
 import '../rule.dart';
 
+/// Reports message keys that are absent from one or more ARB locales.
+///
+/// Catalogs that failed to parse are ignored. Fewer than two valid catalogs
+/// produces no findings. Each missing key is reported once, naming the
+/// locales that lack it.
 final class MissingArbKeyRule implements AuditRule {
   @override
   String get id => 'FG-L10N-001';
@@ -54,6 +59,11 @@ final class MissingArbKeyRule implements AuditRule {
   }
 }
 
+/// Compares ICU placeholder names for the same key across locales.
+///
+/// The first valid catalog is the base. Each later catalog whose placeholder
+/// set differs for a shared key is reported. Fewer than two valid catalogs
+/// produces no findings. Keys missing from the later catalog are skipped.
 final class PlaceholderMismatchRule implements AuditRule {
   @override
   String get id => 'FG-L10N-002';
@@ -86,6 +96,10 @@ final class PlaceholderMismatchRule implements AuditRule {
   }
 }
 
+/// Reports repeated top-level keys in an ARB file.
+///
+/// Every catalog on the project is visited, including catalogs that failed
+/// to parse, and each duplicate key recorded by the parser becomes a finding.
 final class DuplicateArbKeyRule implements AuditRule {
   @override
   String get id => 'FG-L10N-003';
@@ -124,6 +138,11 @@ final class DuplicateArbKeyRule implements AuditRule {
   }
 }
 
+/// Checks `l10n.yaml` and the configured required locales for missing catalogs.
+///
+/// When l10n config is present, a missing template ARB and an `arb-dir` with
+/// no ARB files are reported. Each locale in `requiredLocales` that has no
+/// catalog is reported, whether or not `l10n.yaml` exists.
 final class MissingLocaleFileRule implements AuditRule {
   @override
   String get id => 'FG-L10N-004';
@@ -201,6 +220,11 @@ final class MissingLocaleFileRule implements AuditRule {
   }
 }
 
+/// Compares plural and select kinds and cases for the same key across locales.
+///
+/// A shared key is reported when the message kind differs or the case sets
+/// differ. Fewer than two valid catalogs produces no findings. The first
+/// valid catalog is the base.
 final class PluralSelectRule implements AuditRule {
   @override
   String get id => 'FG-L10N-005';
@@ -234,6 +258,11 @@ final class PluralSelectRule implements AuditRule {
   }
 }
 
+/// Heuristic for sentence-like literals in `Text` and common label arguments.
+///
+/// Generated files and paths under `test/` are skipped. A literal is treated
+/// as user-facing when it contains a space and a run of at least three
+/// letters, and it does not start with `http` or contain `/`.
 final class HardcodedStringRule implements AuditRule {
   @override
   String get id => 'FG-L10N-006';
@@ -334,6 +363,7 @@ List<Finding> _compare(
   return findings;
 }
 
+/// Built-in localization rules, in a stable evaluation order.
 List<AuditRule> localizationRules() => [
   MissingArbKeyRule(),
   PlaceholderMismatchRule(),

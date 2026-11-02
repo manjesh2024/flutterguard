@@ -7,6 +7,11 @@ import '../../core/finding.dart';
 import '../../core/severity.dart';
 import '../rule.dart';
 
+/// Codegen, lint, and launcher packages skipped by the unused-dependency check.
+///
+/// A direct dependency whose name is in this set is not reported when no
+/// `package:` import is found. The set is a built-in allow list, not a
+/// complete catalog of development tools.
 const toolingPackages = {
   'build_runner',
   'build',
@@ -26,6 +31,10 @@ const toolingPackages = {
   'source_gen',
 };
 
+/// Curated package names mapped to a commonly used replacement.
+///
+/// [DeprecatedPackageRule] reports a direct dependency when its name is a key.
+/// The map is not an exhaustive list of discontinued packages.
 const deprecatedPackages = {
   'pedantic': 'lints',
   'package_info': 'package_info_plus',
@@ -36,6 +45,11 @@ const deprecatedPackages = {
   'flutter_webview_plugin': 'webview_flutter',
 };
 
+/// Heuristic that a direct dependency is never referenced in scanned text.
+///
+/// SDK dependencies and names in [toolingPackages] are skipped. A dependency
+/// is treated as used when any scanned file contains `package:<name>/` or
+/// `package:<name>`. Both dependencies and dev dependencies are checked.
 final class UnusedDependencyRule implements AuditRule {
   @override
   String get id => 'FG-DEP-001';
@@ -87,6 +101,11 @@ final class UnusedDependencyRule implements AuditRule {
   }
 }
 
+/// Reports newer versions from `dart pub outdated` when that check ran.
+///
+/// Returns no findings when the outdated status is `disabled`. Any other
+/// status besides `ok` becomes one info finding. When the status is `ok`,
+/// each package whose current version differs from latest is reported.
 final class OutdatedDependencyRule implements AuditRule {
   @override
   String get id => 'FG-DEP-002';
@@ -140,6 +159,11 @@ final class OutdatedDependencyRule implements AuditRule {
   }
 }
 
+/// Heuristic that a dependency is discontinued or has a curated replacement.
+///
+/// Direct and dev dependencies named in [deprecatedPackages] are reported
+/// with that replacement. Locked packages marked discontinued by pub outdated
+/// are reported separately. The list is not a vulnerability feed.
 final class DeprecatedPackageRule implements AuditRule {
   @override
   String get id => 'FG-DEP-003';
@@ -197,6 +221,13 @@ final class DeprecatedPackageRule implements AuditRule {
   }
 }
 
+/// Reads LICENSE files already present in the local pub cache.
+///
+/// An empty or missing pubspec license field is an info finding. Each direct
+/// locked package other than `flutter` and `flutter_test` is checked with
+/// [cachedLicenseKind]: a missing cache file is info, and a file that matches
+/// no known heading is reported at the rule default. This is metadata, not a
+/// legal opinion.
 final class LicenseMetadataRule implements AuditRule {
   @override
   String get id => 'FG-DEP-004';
@@ -266,6 +297,9 @@ final class LicenseMetadataRule implements AuditRule {
   }
 }
 
+/// Reports path and git sources in the production `dependencies` section.
+///
+/// Dev dependencies are not checked. Hosted and SDK sources are ignored.
 final class DependencySourceRule implements AuditRule {
   @override
   String get id => 'FG-DEP-005';
@@ -307,6 +341,12 @@ final class DependencySourceRule implements AuditRule {
   }
 }
 
+/// Reports advisories already collected for locked package versions.
+///
+/// Returns no findings when the vulnerability status is `disabled`. Any
+/// status besides `ok` becomes one info finding. When the status is `ok`,
+/// each advisory on the scan signals is reported. This rule does not contact
+/// the network itself.
 final class VulnerabilityRule implements AuditRule {
   @override
   String get id => 'FG-DEP-006';
@@ -368,6 +408,13 @@ String _corpus(RuleScope scope) {
   return buffer.toString();
 }
 
+/// License heading found for [package] at [version] in the local pub cache.
+///
+/// Looks under `PUB_CACHE`, or `HOME/.pub-cache` when that variable is unset,
+/// in the `pub.dev` and `pub.dartlang.org` hosted directories. The first
+/// existing `LICENSE`, `LICENSE.md`, `LICENSE.txt`, or `COPYING` file is
+/// classified as `MIT`, `Apache-2.0`, `BSD`, `ISC`, `GPL`, or `unknown`.
+/// Returns null when none of those files exist.
 String? cachedLicenseKind(String package, String version) {
   final cache =
       Platform.environment['PUB_CACHE'] ??
@@ -413,6 +460,7 @@ String? cachedLicenseKind(String package, String version) {
   return null;
 }
 
+/// Built-in dependency rules, in a stable evaluation order.
 List<AuditRule> dependencyRules() => [
   UnusedDependencyRule(),
   OutdatedDependencyRule(),

@@ -3,11 +3,20 @@
 /// Supported syntax is `*`, `?`, and `**`. Character classes and brace
 /// expansion are rejected by configuration validation before they get here.
 final class GlobMatcher {
+  /// Compiles [pattern] into a full-string match.
+  ///
+  /// `*` matches inside one path segment, `?` matches one non-`/` character,
+  /// and `**` matches across segments. `**/` may match an empty prefix.
   GlobMatcher(this.pattern) : _expression = RegExp(_compile(pattern));
 
+  /// Pattern passed to the constructor, unchanged.
   final String pattern;
   final RegExp _expression;
 
+  /// Whether [posixPath] matches [pattern] from start to end.
+  ///
+  /// Backslashes are treated as separators. A leading `./` or `/` is removed
+  /// before matching.
   bool matches(String posixPath) {
     final normalized = posixPath
         .replaceAll('\\', '/')
@@ -16,6 +25,9 @@ final class GlobMatcher {
     return _expression.hasMatch(normalized);
   }
 
+  /// Whether [pattern] contains `[`, `]`, `{`, or `}`.
+  ///
+  /// Those characters are outside the supported `*`, `?`, and `**` syntax.
   static bool hasUnsupportedSyntax(String pattern) {
     return pattern.contains('[') ||
         pattern.contains(']') ||
@@ -65,6 +77,9 @@ final class GlobMatcher {
   }
 }
 
+/// Whether any matcher in [matchers] matches [posixPath].
+///
+/// Returns false when [matchers] is empty. Stops at the first match.
 bool anyGlobMatches(Iterable<GlobMatcher> matchers, String posixPath) {
   for (final matcher in matchers) {
     if (matcher.matches(posixPath)) {

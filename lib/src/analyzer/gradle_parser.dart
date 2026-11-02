@@ -1,4 +1,9 @@
+/// One Android product flavor read from a Gradle build file.
 final class FlavorModel {
+  /// Creates a flavor. Every argument is required.
+  ///
+  /// applicationId, applicationIdSuffix, and appName are null when those
+  /// assignments are absent from the flavor block.
   const FlavorModel({
     required this.name,
     required this.applicationId,
@@ -6,11 +11,25 @@ final class FlavorModel {
     required this.appName,
   });
 
+  /// Name of the flavor block, such as `dev` or `prod`.
   final String name;
+
+  /// Quoted `applicationId` inside the flavor, or null when it is absent.
   final String? applicationId;
+
+  /// Quoted `applicationIdSuffix` inside the flavor, or null when absent.
   final String? applicationIdSuffix;
+
+  /// `app_name` string passed to `resValue` inside the flavor, or null when
+  /// that call is absent.
   final String? appName;
 
+  /// Application id to use for this flavor.
+  ///
+  /// Returns applicationId when it is non-null. Otherwise returns defaultId
+  /// with applicationIdSuffix concatenated and no extra separator, or
+  /// defaultId alone when the suffix is null. Returns null when both
+  /// applicationId and defaultId are null.
   String? resolvedId(String? defaultId) {
     if (applicationId != null) {
       return applicationId;
@@ -25,7 +44,9 @@ final class FlavorModel {
   }
 }
 
+/// Android ids, flavors, and release flags extracted from one Gradle file.
 final class GradleModel {
+  /// Creates a model for the file at path. Every argument is required.
   const GradleModel({
     required this.path,
     required this.applicationIds,
@@ -36,15 +57,42 @@ final class GradleModel {
     required this.hasReleaseBuildType,
   });
 
+  /// Project-relative path of the Gradle file that was parsed.
   final String path;
+
+  /// Every quoted `applicationId` assignment in the file, in source order.
   final List<String> applicationIds;
+
+  /// Flavors from the first `productFlavors` block, or an empty list.
   final List<FlavorModel> flavors;
+
+  /// True when the first `release` block sets `debuggable` to true.
   final bool releaseDebuggable;
+
+  /// `minifyEnabled` from the first `release` block.
+  ///
+  /// Null when that block is missing or does not assign `minifyEnabled` to
+  /// `true` or `false`.
   final bool? releaseMinify;
+
+  /// First `minSdk` or `minSdkVersion` integer in the file, or null.
   final int? minSdk;
+
+  /// True when a `release` block was found.
   final bool hasReleaseBuildType;
 }
 
+/// Parses a Gradle or Kotlin DSL build file at path.
+///
+/// A keyword block counts only when `{` appears before the next newline.
+/// Flavors are the named blocks inside the first `productFlavors` block.
+/// applicationIds are quoted `applicationId` assignments from the whole
+/// file, not only `defaultConfig`. Release flags come from the first
+/// `release` block: releaseDebuggable is true only when `debuggable` is
+/// true, and releaseMinify is the `minifyEnabled` boolean or null.
+/// minSdk is the first `minSdk` or `minSdkVersion` integer. Text that does
+/// not match leaves lists empty and optional fields null. This does not
+/// throw.
 GradleModel parseGradle(String path, String text) {
   final flavorsBlock = _blockAfter(text, 'productFlavors');
   final flavors = <FlavorModel>[];

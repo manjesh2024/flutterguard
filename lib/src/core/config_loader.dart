@@ -8,8 +8,20 @@ import 'exceptions.dart';
 import 'severity.dart';
 import 'version.dart';
 
+/// File name of the project configuration, `.flutterguard.yaml`.
 const String configFileName = '.flutterguard.yaml';
 
+/// Loads configuration for a scan rooted at [rootPath].
+///
+/// When [configPath] is null, the file is [configFileName] inside
+/// [rootPath]. A missing default file returns [FlutterGuardConfig.defaults]
+/// and does not throw. A missing explicit [configPath] throws
+/// [ConfigException].
+///
+/// Malformed YAML, unknown keys, and an unsupported schema version also
+/// throw [ConfigException]. Those failures do not fall back to defaults.
+/// The returned configuration is not yet checked against the rule registry;
+/// call [validateKnownRules] after the registry is known.
 FlutterGuardConfig loadConfig({required String rootPath, String? configPath}) {
   final file = configPath == null
       ? File(p.join(rootPath, configFileName))
@@ -32,6 +44,13 @@ FlutterGuardConfig loadConfig({required String rootPath, String? configPath}) {
   }
 }
 
+/// Parses [yaml] into a configuration.
+///
+/// [source] is the path or label included in error messages. It defaults
+/// to [configFileName]. Empty input, a non-mapping document, unknown keys,
+/// and invalid values throw [ConfigException]. Omitted sections use the
+/// same defaults as [FlutterGuardConfig.defaults]. This function does not
+/// read the filesystem.
 FlutterGuardConfig parseConfig(String yaml, {String source = configFileName}) {
   final Object? loaded;
   try {
@@ -873,6 +892,11 @@ void _validateRuleReferences(
   }
 }
 
+/// Rejects rule ids in [config] that are not in [knownIds].
+///
+/// Checks severity overrides, per-rule settings, and suppressions. Throws
+/// [ConfigException] with the name of the unknown id. Does not modify
+/// [config].
 void validateKnownRules(FlutterGuardConfig config, Set<String> knownIds) {
   void check(String id, String path) {
     if (!knownIds.contains(id)) {

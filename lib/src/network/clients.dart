@@ -3,6 +3,14 @@ import 'dart:io';
 
 import 'signals.dart';
 
+/// Parses the JSON object written by `dart pub outdated --json`.
+///
+/// Keeps objects in `packages` whose `kind` is `direct` or `dev` and whose
+/// `package` is a string. current and latest are the nested `version`
+/// strings, or null when that object has no string version. discontinued is
+/// true only when `isDiscontinued` is the boolean true. Returns an empty
+/// list when the root is not a JSON object or `packages` is not a list.
+/// Invalid JSON throws FormatException.
 List<OutdatedPackage> parseOutdatedJson(String text) {
   final decoded = jsonDecode(text);
   if (decoded is! Map || decoded['packages'] is! List) {
@@ -40,6 +48,13 @@ List<OutdatedPackage> parseOutdatedJson(String text) {
   return packages;
 }
 
+/// Parses an OSV query body into advisories for the requested package version.
+///
+/// package and version are copied onto every advisory and are not read from
+/// body. Entries in `vulns` are kept when they are objects with a string
+/// `id`. summary is the string `summary`, or empty otherwise. Returns an
+/// empty list when body is not a JSON object or `vulns` is not a list.
+/// Invalid JSON throws FormatException.
 List<PackageAdvisory> parseOsvResponse({
   required String package,
   required String version,
@@ -66,7 +81,19 @@ List<PackageAdvisory> parseOsvResponse({
   return advisories;
 }
 
+/// Outdated-package client that runs `dart pub outdated --json`.
+///
+/// ```dart
+/// final packages = await ProcessOutdatedClient().fetch(projectRoot);
+/// ```
 final class ProcessOutdatedClient implements OutdatedClient {
+  /// Runs `dart pub outdated --json` with projectRoot as the working directory.
+  ///
+  /// Returns the direct and dev packages parsed from stdout. A non-zero exit
+  /// throws StateError naming that exit code. The process future is capped
+  /// at 60 seconds and then throws TimeoutException. Invalid JSON in stdout
+  /// throws FormatException. Failure to start `dart` throws ProcessException.
+  /// This starts a subprocess.
   @override
   Future<List<OutdatedPackage>> fetch(String projectRoot) async {
     final result = await Process.run(
@@ -83,7 +110,23 @@ final class ProcessOutdatedClient implements OutdatedClient {
   }
 }
 
+/// Vulnerability client that queries the OSV API for one Pub package version.
+///
+/// ```dart
+/// final advisories = await OsvVulnerabilityClient().fetch(
+///   package: 'http',
+///   version: '1.2.0',
+/// );
+/// ```
 final class OsvVulnerabilityClient implements VulnerabilityClient {
+  /// Posts package and version to `https://api.osv.dev/v1/query`.
+  ///
+  /// The JSON body sets the ecosystem to `Pub`. Returns advisories parsed
+  /// from a response whose status is 200. Any other status throws StateError
+  /// naming that code. Opening the request and closing the response each
+  /// time out after 15 seconds with TimeoutException. Invalid JSON in the
+  /// body throws FormatException. The HTTP client is closed with force even
+  /// when the request fails. This performs a network request.
   @override
   Future<List<PackageAdvisory>> fetch({
     required String package,

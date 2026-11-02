@@ -3,6 +3,12 @@ import '../../core/finding.dart';
 import '../../core/severity.dart';
 import '../rule.dart';
 
+/// Checks an existing `android/` tree for a manifest and exported components.
+///
+/// Projects without Android are skipped. Reports a missing manifest, a
+/// manifest parse error, a missing application label, and each exported
+/// component that has no intent filter. The exported-component finding is
+/// marked heuristic.
 final class AndroidPlatformRule implements AuditRule {
   @override
   String get id => 'FG-PLAT-001';
@@ -77,6 +83,11 @@ final class AndroidPlatformRule implements AuditRule {
   }
 }
 
+/// Checks an existing `ios/` tree for Info.plist identity and privacy strings.
+///
+/// Projects without iOS are skipped. A missing Info.plist and a missing
+/// bundle identifier are reported at high severity. A missing iOS display
+/// name, each empty privacy key, and each plist error are also reported.
 final class IosPlatformRule implements AuditRule {
   @override
   String get id => 'FG-PLAT-002';
@@ -157,6 +168,10 @@ final class IosPlatformRule implements AuditRule {
   }
 }
 
+/// Checks an existing `web/` tree for `index.html` and `manifest.json`.
+///
+/// Projects without web are skipped. A missing `web/index.html` is reported
+/// at high severity. A missing `web/manifest.json` uses the rule default.
 final class WebPlatformRule implements AuditRule {
   @override
   String get id => 'FG-PLAT-003';
@@ -208,6 +223,10 @@ final class WebPlatformRule implements AuditRule {
   }
 }
 
+/// Checks an existing `windows/` tree for `CMakeLists.txt` and `Runner.rc`.
+///
+/// Projects without Windows are skipped. A missing CMake file is reported at
+/// high severity. A missing `windows/runner/Runner.rc` uses the rule default.
 final class WindowsPlatformRule implements AuditRule {
   @override
   String get id => 'FG-PLAT-004';
@@ -237,6 +256,11 @@ final class WindowsPlatformRule implements AuditRule {
   );
 }
 
+/// Checks an existing `macos/` tree for an Xcode project and bundle identifier.
+///
+/// Projects without macOS are skipped. The project check looks for a
+/// `.pbxproj` path containing `macos/`. The identifier check looks for the
+/// text `PRODUCT_BUNDLE_IDENTIFIER` in a file under `macos/`.
 final class MacosPlatformRule implements AuditRule {
   @override
   String get id => 'FG-PLAT-005';
@@ -298,6 +322,11 @@ final class MacosPlatformRule implements AuditRule {
   }
 }
 
+/// Checks an existing `linux/` tree for CMake and `my_application.cc`.
+///
+/// Projects without Linux are skipped. A missing `linux/CMakeLists.txt` is
+/// reported at high severity. A missing `linux/runner/my_application.cc` uses
+/// the rule default.
 final class LinuxPlatformRule implements AuditRule {
   @override
   String get id => 'FG-PLAT-006';
@@ -357,6 +386,7 @@ List<Finding> _desktop(
   return findings;
 }
 
+/// Built-in platform rules, in a stable evaluation order.
 List<AuditRule> platformRules() => [
   AndroidPlatformRule(),
   IosPlatformRule(),

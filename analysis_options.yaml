@@ -15,6 +15,7 @@ analyzer:
 
 linter:
   rules:
+    public_member_api_docs: true
     avoid_print: true
     prefer_single_quotes: true
     unawaited_futures: true

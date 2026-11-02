@@ -2,15 +2,36 @@ import '../baseline/baseline.dart';
 import '../core/config.dart';
 import '../core/finding.dart';
 
+/// Outcome of comparing findings with the configured quality gate.
 final class QualityGateResult {
+  /// Records whether the gate [passed] and the human-readable [reasons].
+  ///
+  /// [reasons] is empty when [passed] is true.
   const QualityGateResult({required this.passed, required this.reasons});
 
+  /// Whether every configured gate condition was satisfied.
   final bool passed;
+
+  /// Explanations for a failed gate, in the order the checks ran.
+  ///
+  /// Empty when [passed] is true.
   final List<String> reasons;
 
+  /// JSON object with `passed` and `reasons` for the scan report.
   Map<String, Object?> toJson() => {'passed': passed, 'reasons': reasons};
 }
 
+/// Evaluates [config] against the findings that will appear in the report.
+///
+/// [findings] are the reported findings after suppression and, when a
+/// baseline is enabled, after baseline filtering. [baseline] supplies the
+/// new-finding counts used by `failOnNew` and `maxNewFindings`.
+///
+/// The gate fails when any reported finding has a severity in
+/// `config.failOn`, when `maxFindings` is set and [findings] is longer, or
+/// when the baseline is enabled and the new-finding limits fail. It does
+/// not throw. A failed gate is represented by [QualityGateResult.passed]
+/// set to false.
 QualityGateResult evaluateGate({
   required FlutterGuardConfig config,
   required List<Finding> findings,

@@ -5,6 +5,10 @@ import '../../core/glob.dart';
 import '../../core/severity.dart';
 import '../rule.dart';
 
+/// Package names treated as database clients by the UI database-access check.
+///
+/// A widget or presentation file that imports one of these packages is
+/// reported. The set is a fixed review list, not every database plugin.
 const databasePackages = {
   'sqflite',
   'sqflite_common',
@@ -30,6 +34,12 @@ const _uiMethods = {
   'didUpdateWidget',
 };
 
+/// Flags imports that point from one architecture layer into a forbidden layer.
+///
+/// When the selected profile does not enforce layers, evaluation returns no
+/// findings. Otherwise each Dart file is assigned the first configured layer
+/// whose path pattern matches, and an import is reported when the target
+/// layer is different and is not in that layer's allowed import set.
 final class LayerDependencyRule implements AuditRule {
   @override
   String get id => 'FG-ARCH-001';
@@ -94,6 +104,9 @@ final class LayerDependencyRule implements AuditRule {
   }
 }
 
+/// Reports each import cycle from the Dart index once, in index order.
+///
+/// The finding path is the first library named in the cycle.
 final class CircularImportRule implements AuditRule {
   @override
   String get id => 'FG-ARCH-002';
@@ -128,6 +141,11 @@ final class CircularImportRule implements AuditRule {
   }
 }
 
+/// Heuristic for complex methods living in a widget or presentation file.
+///
+/// Generated files, UI lifecycle methods, and methods whose names start with
+/// `build` are skipped. A remaining method is reported when its cyclomatic
+/// complexity is at least `architecture.businessLogicComplexity`.
 final class BusinessLogicPlacementRule implements AuditRule {
   @override
   String get id => 'FG-ARCH-003';
@@ -182,6 +200,11 @@ final class BusinessLogicPlacementRule implements AuditRule {
   }
 }
 
+/// Heuristic that flags database imports or raw SQL calls inside UI files.
+///
+/// Generated files are skipped. A file that imports any name in
+/// [databasePackages] is reported and is not also scanned for call sites.
+/// Otherwise the first recorded database call in that file is reported.
 final class DirectDatabaseAccessRule implements AuditRule {
   @override
   String get id => 'FG-ARCH-004';
@@ -240,6 +263,11 @@ final class DirectDatabaseAccessRule implements AuditRule {
   }
 }
 
+/// Flags `lib/features` imports that reach into another feature's internals.
+///
+/// Returns no findings when `architecture.featureCoupling` is off. An import
+/// of `lib/features/<name>/<name>.dart` is allowed; any other file under a
+/// different feature directory is reported.
 final class FeatureCouplingRule implements AuditRule {
   @override
   String get id => 'FG-ARCH-005';
@@ -322,6 +350,7 @@ bool _uiFile(DartFileFacts file, RuleScope scope) {
   return layer == 'presentation';
 }
 
+/// Built-in architecture rules, in a stable evaluation order.
 List<AuditRule> architectureRules() => [
   LayerDependencyRule(),
   CircularImportRule(),

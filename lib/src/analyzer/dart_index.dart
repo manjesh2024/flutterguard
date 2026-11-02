@@ -8,7 +8,30 @@ import 'package:path/path.dart' as p;
 import '../context/file_index.dart';
 import 'complexity.dart';
 
+/// One `import` directive after URI resolution and the unused-import check.
+///
+/// A deferred import is recorded as used. A prefixed import is unused
+/// only when its prefix is absent from the file's simple identifiers,
+/// which do not include the import directive itself. An unprefixed
+/// import is unused when every `show` name is unused, when it is
+/// `dart:core` with no `show` or `hide`, or, when it has no `show`
+/// list, when no visible name from the parsed target is referenced.
+/// A missing target, an unparsed target, or a target with no public
+/// or exported names stays used once those earlier checks have passed.
 final class ImportFact {
+  /// Creates a fact for one resolved import.
+  ///
+  /// Every parameter is required and is stored on the matching field.
+  /// `uri` is the URI text. `prefix` is the `as` name, or null when
+  /// the import has no prefix. `shown` and `hidden` are the combinator
+  /// names. `deferred` reports the `deferred` keyword. `line` and
+  /// `column` are the 1-based start of the directive. `singleLine`
+  /// reports that the directive begins and ends on one line.
+  /// `lineText` is the trimmed source of that start line. `targetPath`
+  /// is the project path from [resolveDartUri], or null when the URI
+  /// does not land in this package. `unused` and `autoFixable` are the
+  /// unused-import result. `unusedReason` explains an unused import,
+  /// or is empty when the import is used.
   const ImportFact({
     required this.uri,
     required this.prefix,
@@ -25,22 +48,79 @@ final class ImportFact {
     required this.unusedReason,
   });
 
+  /// Import URI as written, such as `package:foo/foo.dart`.
   final String uri;
+
+  /// Name bound by `as`, or null when the import has no prefix.
   final String? prefix;
+
+  /// Names gathered from every `show` combinator.
+  ///
+  /// Empty when the directive has no `show` combinator.
   final List<String> shown;
+
+  /// Names gathered from every `hide` combinator.
+  ///
+  /// Empty when the directive hides nothing.
   final List<String> hidden;
+
+  /// Whether the directive includes the `deferred` keyword.
+  ///
+  /// Deferred imports are recorded as used.
   final bool deferred;
+
+  /// 1-based line where the import directive starts.
   final int line;
+
+  /// 1-based column where the import directive starts.
   final int column;
+
+  /// Whether the directive's start and end offsets share a line.
+  ///
+  /// Unused-import deletion consults this before removing a directive.
   final bool singleLine;
+
+  /// Trimmed source of the line where the directive starts.
+  ///
+  /// Empty when that line number falls outside the file.
   final String lineText;
+
+  /// Project-relative path of a same-package target.
+  ///
+  /// Null when [resolveDartUri] cannot place `uri` in this package.
   final String? targetPath;
+
+  /// Whether this import is treated as unused.
+  ///
+  /// See the class description for which imports qualify. A used
+  /// import stores false.
   final bool unused;
+
+  /// Whether an unused import may be removed by deleting its one line.
+  ///
+  /// True when the import is unused because of its prefix, its `show`
+  /// list, or a bare `dart:core` import, and the directive is one line.
+  /// False when the import is used, when the directive spans lines, and
+  /// when it is unused because no visible library name is referenced.
+  /// That last case is kept because the import may provide an extension.
   final bool autoFixable;
+
+  /// Why `unused` is true, or the empty string when the import is used.
+  ///
+  /// The text says that the prefix is never used, that none of the
+  /// shown names are used, that `dart:core` is imported automatically,
+  /// or that none of the imported library names are referenced.
   final String unusedReason;
 }
 
+/// One `export` directive and the project path it points at, if any.
 final class ExportFact {
+  /// Creates a fact for one export directive.
+  ///
+  /// Every parameter is required and is stored on the matching field.
+  /// `uri` is the URI text. `shown` and `hidden` are the combinator
+  /// names. `targetPath` is the project path from [resolveDartUri], or
+  /// null when the URI does not land in this package.
   const ExportFact({
     required this.uri,
     required this.shown,
@@ -48,13 +128,36 @@ final class ExportFact {
     required this.targetPath,
   });
 
+  /// Export URI as written in the directive.
   final String uri;
+
+  /// Names gathered from every `show` combinator.
+  ///
+  /// Empty when the export is not limited by `show`.
   final List<String> shown;
+
+  /// Names gathered from every `hide` combinator.
+  ///
+  /// Empty when the export hides nothing.
   final List<String> hidden;
+
+  /// Project-relative path of a same-package export target.
+  ///
+  /// Null when [resolveDartUri] cannot place `uri` in this package.
   final String? targetPath;
 }
 
+/// A comment whose text contains `TODO`, `FIXME`, `HACK`, or `XXX`.
+///
+/// The marker match is case-sensitive, so only those uppercase words
+/// are collected. Other comments are ignored here.
 final class CommentFact {
+  /// Creates a fact for one tagged comment.
+  ///
+  /// Every parameter is required and is stored on the matching field.
+  /// `line` and `column` are the 1-based location of the comment token.
+  /// `tag` is the matched marker. `text` is the comment lexeme with
+  /// each whitespace run collapsed to one space, then trimmed.
   const CommentFact({
     required this.line,
     required this.column,
@@ -62,13 +165,35 @@ final class CommentFact {
     required this.text,
   });
 
+  /// 1-based line of the comment token.
   final int line;
+
+  /// 1-based column of the comment token.
   final int column;
+
+  /// Matched marker: `TODO`, `FIXME`, `HACK`, or `XXX`.
   final String tag;
+
+  /// Full comment lexeme, with whitespace collapsed and the ends trimmed.
   final String text;
 }
 
+/// A function, method, or constructor that has a real body.
+///
+/// A semicolon body is omitted. An empty block is still recorded.
+/// For a constructor, `name` is the constructor name, the type name
+/// when the constructor is unnamed, or the word `constructor` when
+/// neither token is present.
 final class MethodFact {
+  /// Creates a fact for one callable declaration.
+  ///
+  /// Every parameter is required and is stored on the matching field.
+  /// `name` is the callable name described on this class. `owner` is
+  /// the enclosing declaration name, or null for a top-level function.
+  /// `line` and `column` are the 1-based start. `lines` is how many
+  /// source lines the declaration spans. `complexity` is its cyclomatic
+  /// complexity. `returnsFuture` is true when the written return type
+  /// is named `Future` or `FutureOr`.
   const MethodFact({
     required this.name,
     required this.owner,
@@ -79,16 +204,52 @@ final class MethodFact {
     required this.returnsFuture,
   });
 
+  /// Function, method, or constructor name recorded for this declaration.
   final String name;
+
+  /// Enclosing declaration name, captured before this callable is entered.
+  ///
+  /// A method or constructor stores its class. A local function stores
+  /// the function or method that contains it. A top-level function
+  /// stores null. Only that one name is kept.
   final String? owner;
+
+  /// 1-based line where the declaration starts.
   final int line;
+
+  /// 1-based column where the declaration starts.
   final int column;
+
+  /// Source lines from the declaration's first line through its last.
+  ///
+  /// The count includes both ends and is at least 1.
   final int lines;
+
+  /// Cyclomatic complexity of this declaration.
+  ///
+  /// The count starts at 1 and increases for each decision point in
+  /// the node, including decision points in nested functions.
   final int complexity;
+
+  /// Whether the written return type's name is `Future` or `FutureOr`.
+  ///
+  /// This checks the type name as written, not a resolved type.
+  /// Constructors store false.
   final bool returnsFuture;
 }
 
+/// A class declaration and the superclass name written on it.
+///
+/// `implements` and `with` clauses are not recorded. Mixins, enums,
+/// and extensions are not class facts.
 final class ClassFact {
+  /// Creates a fact for one class declaration.
+  ///
+  /// Every parameter is required and is stored on the matching field.
+  /// `name` is the class name. `superclass` is the identifier in the
+  /// `extends` clause, or null when there is no `extends` clause.
+  /// `line` and `column` are the 1-based start. `lines` is how many
+  /// source lines the declaration spans.
   const ClassFact({
     required this.name,
     required this.superclass,
@@ -97,12 +258,33 @@ final class ClassFact {
     required this.lines,
   });
 
+  /// Class name as declared.
   final String name;
+
+  /// Identifier in the `extends` clause, without type arguments.
+  ///
+  /// Null when the class has no `extends` clause.
   final String? superclass;
+
+  /// 1-based line where the class declaration starts.
   final int line;
+
+  /// 1-based column where the class declaration starts.
   final int column;
+
+  /// Source lines from the class declaration's first line through its last.
+  ///
+  /// The count includes both ends and is at least 1.
   final int lines;
 
+  /// Whether `superclass` names a widget or `State` base.
+  ///
+  /// Returns true when `superclass` is `StatelessWidget`,
+  /// `StatefulWidget`, `ConsumerWidget`, `ConsumerStatefulWidget`,
+  /// `HookWidget`, `StatelessHookWidget`, or `State`, or when that
+  /// name starts with `State`. Returns false when `superclass` is null.
+  /// The comparison uses the written name, including the `State` prefix
+  /// check, and has no side effects.
   bool get isWidget {
     const widgets = {
       'StatelessWidget',
@@ -121,7 +303,15 @@ final class ClassFact {
   }
 }
 
+/// A `catch` clause, including whether its body has no statements.
 final class CatchFact {
+  /// Creates a fact for one catch clause.
+  ///
+  /// Every parameter is required and is stored on the matching field.
+  /// `line` and `column` are the 1-based location of the clause.
+  /// `empty` is true when the catch body contains no statements.
+  /// `enclosing` is the innermost enclosing declaration name, or null
+  /// at library scope.
   const CatchFact({
     required this.line,
     required this.column,
@@ -129,13 +319,38 @@ final class CatchFact {
     required this.enclosing,
   });
 
+  /// 1-based line of the catch clause.
   final int line;
+
+  /// 1-based column of the catch clause.
   final int column;
+
+  /// Whether the catch body contains no statements.
   final bool empty;
+
+  /// Innermost class, constructor, method, or function around the clause.
+  ///
+  /// Null when the clause is outside those declarations.
   final String? enclosing;
 }
 
+/// A `print`, `debugPrint`, or `log` call recorded while indexing.
+///
+/// Unqualified `print` and `debugPrint` calls are always recorded.
+/// A `log` call is recorded only when one of its arguments looks like
+/// a secret. Sensitivity is a case-insensitive substring match for
+/// `password`, `secret`, `token`, `credential`, `authorization`, or
+/// `apikey` with an optional `_` or `-` before `key`. A string literal
+/// is tested by its value, an identifier by its name, and an
+/// interpolation by its source text.
 final class InvocationFact {
+  /// Creates a fact for one logging call.
+  ///
+  /// Every parameter is required and is stored on the matching field.
+  /// `line` and `column` are the 1-based location of the invocation.
+  /// `name` is `print`, `debugPrint`, or `log`. `enclosing` is the
+  /// innermost enclosing declaration name, or null at library scope.
+  /// `sensitive` is true when an argument matches a sensitive word.
   const InvocationFact({
     required this.line,
     required this.column,
@@ -144,14 +359,40 @@ final class InvocationFact {
     required this.sensitive,
   });
 
+  /// 1-based line of the invocation.
   final int line;
+
+  /// 1-based column of the invocation.
   final int column;
+
+  /// Callee name: `print`, `debugPrint`, or `log`.
   final String name;
+
+  /// Innermost class, constructor, method, or function around the call.
+  ///
+  /// Null when the call is outside those declarations.
   final String? enclosing;
+
+  /// Whether any argument matches a sensitive word.
+  ///
+  /// The class description lists the words and which expressions are
+  /// tested. Other argument shapes store false.
   final bool sensitive;
 }
 
+/// A string literal whose value is at most 2000 characters.
+///
+/// Interpolated strings are not collected. Adjacent string literals
+/// are stored as one combined value, and their pieces are not stored
+/// again. Values longer than 2000 characters are omitted.
 final class StringFact {
+  /// Creates a fact for one string literal.
+  ///
+  /// Every parameter is required and is stored on the matching field.
+  /// `line` and `column` are the 1-based location. `value` is the
+  /// literal value, already combined when the source used adjacent
+  /// strings. `enclosing` is the innermost enclosing declaration name,
+  /// or null at library scope.
   const StringFact({
     required this.line,
     required this.column,
@@ -159,13 +400,34 @@ final class StringFact {
     required this.enclosing,
   });
 
+  /// 1-based line of the literal.
   final int line;
+
+  /// 1-based column of the literal.
   final int column;
+
+  /// Literal value, with adjacent string literals already combined.
   final String value;
+
+  /// Innermost class, constructor, method, or function around the literal.
+  ///
+  /// Null when the literal is outside those declarations.
   final String? enclosing;
 }
 
+/// A string literal taken from `Text` or from a label-like argument.
+///
+/// Collected from the first argument of a `Text` instance creation,
+/// and from any named argument called `hintText`, `labelText`,
+/// `helperText`, `tooltip`, `semanticLabel`, or `semanticsLabel`,
+/// when that argument is a simple string or adjacent strings.
 final class WidgetStringFact {
+  /// Creates a fact for one widget string.
+  ///
+  /// Every parameter is required and is stored on the matching field.
+  /// `line` and `column` are the 1-based location of the `Text`
+  /// creation or the named argument. `value` is the literal text.
+  /// `kind` is `Text` or the argument name.
   const WidgetStringFact({
     required this.line,
     required this.column,
@@ -173,13 +435,32 @@ final class WidgetStringFact {
     required this.kind,
   });
 
+  /// 1-based line of the `Text` creation or named argument.
   final int line;
+
+  /// 1-based column of the `Text` creation or named argument.
   final int column;
+
+  /// Literal text taken from that argument.
   final String value;
+
+  /// `Text` for a text widget, otherwise the named-argument name.
   final String kind;
 }
 
+/// An `async` or `async*` callable whose body contains no `await`.
+///
+/// An `await` anywhere in the body, including inside a nested
+/// closure, counts as present, so that callable is left out. A
+/// semicolon body is omitted with the other empty callables.
 final class AsyncFact {
+  /// Creates a fact for one async callable that never awaits.
+  ///
+  /// Every parameter is required and is stored on the matching field.
+  /// `name` uses the same constructor naming as [MethodFact]. `line`
+  /// and `column` are the 1-based start of the declaration. `owner`
+  /// is the enclosing declaration name, or null for a top-level
+  /// function.
   const AsyncFact({
     required this.name,
     required this.line,
@@ -187,13 +468,34 @@ final class AsyncFact {
     required this.owner,
   });
 
+  /// Callable name, with unnamed constructors named the same way as
+  /// [MethodFact].
   final String name;
+
+  /// 1-based line where the async callable starts.
   final int line;
+
+  /// 1-based column where the async callable starts.
   final int column;
+
+  /// Enclosing declaration name, captured before this callable is entered.
+  ///
+  /// Null for a top-level function. Only that one enclosing name is kept.
   final String? owner;
 }
 
+/// A method call that is the entire statement and has no target.
+///
+/// Calls on an object, and calls nested inside a larger expression,
+/// are not included. An unqualified `print` or `debugPrint` statement
+/// is included along with any other bare call.
 final class BareCallFact {
+  /// Creates a fact for one bare call statement.
+  ///
+  /// Every parameter is required and is stored on the matching field.
+  /// `name` is the method name. `line` and `column` are the 1-based
+  /// location of the invocation. `enclosing` is the innermost enclosing
+  /// declaration name, or null at library scope.
   const BareCallFact({
     required this.name,
     required this.line,
@@ -201,13 +503,33 @@ final class BareCallFact {
     required this.enclosing,
   });
 
+  /// Name of the method invoked as a statement.
   final String name;
+
+  /// 1-based line of the bare invocation.
   final int line;
+
+  /// 1-based column of the bare invocation.
   final int column;
+
+  /// Innermost class, constructor, method, or function around the call.
+  ///
+  /// Null when the call is outside those declarations.
   final String? enclosing;
 }
 
+/// A source position labeled with the API name recognized there.
+///
+/// The label is `badCertificateCallback` or `onBadCertificate` for a
+/// call or assignment, or `rawQuery`, `rawInsert`, `rawUpdate`,
+/// `rawDelete`, or `openDatabase` for a call.
 final class LocationFact {
+  /// Creates a fact for one labeled location.
+  ///
+  /// Every parameter is required and is stored on the matching field.
+  /// `line` and `column` are the 1-based location. `label` is the
+  /// matched method or property name. `enclosing` is the innermost
+  /// enclosing declaration name, or null at library scope.
   const LocationFact({
     required this.line,
     required this.column,
@@ -215,13 +537,34 @@ final class LocationFact {
     required this.enclosing,
   });
 
+  /// 1-based line of the call or assignment.
   final int line;
+
+  /// 1-based column of the call or assignment.
   final int column;
+
+  /// Matched method or property name.
   final String label;
+
+  /// Innermost class, constructor, method, or function around the site.
+  ///
+  /// Null when the site is outside those declarations.
   final String? enclosing;
 }
 
+/// A `shared_preferences` write whose key looks like a secret.
+///
+/// Recorded only while the file imports `package:shared_preferences`,
+/// and only for `setString`, `setStringList`, or `setInt` whose first
+/// argument is a string literal matching a sensitive word. The words
+/// are the same substring checks described on [InvocationFact].
 final class StorageFact {
+  /// Creates a fact for one sensitive preference write.
+  ///
+  /// Every parameter is required and is stored on the matching field.
+  /// `line` and `column` are the 1-based location of the call. `key`
+  /// is the literal preference key. `method` is `setString`,
+  /// `setStringList`, or `setInt`.
   const StorageFact({
     required this.line,
     required this.column,
@@ -229,25 +572,58 @@ final class StorageFact {
     required this.method,
   });
 
+  /// 1-based line of the preference setter call.
   final int line;
+
+  /// 1-based column of the preference setter call.
   final int column;
+
+  /// Preference key literal that matched a sensitive word.
   final String key;
+
+  /// Setter that wrote the key: `setString`, `setStringList`, or `setInt`.
   final String method;
 }
 
+/// One syntax diagnostic produced while parsing a Dart file.
+///
+/// Diagnostics are kept on the file facts so indexing can continue.
 final class ParseFact {
+  /// Creates a fact for one parser diagnostic.
+  ///
+  /// Every parameter is required and is stored on the matching field.
+  /// `line` and `column` are the 1-based diagnostic location.
+  /// `message` is the diagnostic text.
   const ParseFact({
     required this.line,
     required this.column,
     required this.message,
   });
 
+  /// 1-based line of the parser diagnostic.
   final int line;
+
+  /// 1-based column of the parser diagnostic.
   final int column;
+
+  /// Diagnostic message reported by the parser.
   final String message;
 }
 
+/// A comment that contains `flutterguard:ignore`.
+///
+/// A usable comment matches `flutterguard:ignore`, then an id of
+/// `FG-` plus uppercase letters, digits, or hyphens, then `reason:`
+/// and a reason. A trailing `*/` on the reason is removed before the
+/// reason is checked. A comment that merely contains the marker and
+/// does not match stores null for the id and reason.
 final class InlineIgnore {
+  /// Creates a fact for one ignore comment.
+  ///
+  /// Every parameter is required and is stored on the matching field.
+  /// `line` is the 1-based line of the comment. `ruleId` and `reason`
+  /// are null when the comment does not match the expected shape.
+  /// `valid` is true only when the parsed reason is non-empty.
   const InlineIgnore({
     required this.line,
     required this.ruleId,
@@ -255,13 +631,41 @@ final class InlineIgnore {
     required this.valid,
   });
 
+  /// 1-based line of the comment that contains `flutterguard:ignore`.
   final int line;
+
+  /// Parsed `FG-` rule id, or null when the comment does not match.
   final String? ruleId;
+
+  /// Parsed reason, or null when the comment does not match.
+  ///
+  /// A match whose reason trims to nothing stores an empty string,
+  /// and that comment is not valid.
   final String? reason;
+
+  /// Whether a non-empty reason was parsed from the comment.
   final bool valid;
 }
 
+/// Everything collected from a single Dart source file.
+///
+/// The lists keep source order. Import targets are resolved before
+/// this object is built, so each [ImportFact] already carries its
+/// unused-import result.
 final class DartFileFacts {
+  /// Creates the facts for one Dart file.
+  ///
+  /// Every parameter is required and is stored on the matching field.
+  /// `path` is the project-relative POSIX path. `generated` marks a
+  /// generated file. `imports`, `exports`, `identifiers`,
+  /// `publicNames`, `comments`, `methods`, `classes`, `catches`,
+  /// `prints`, `sensitiveLogs`, `strings`, `widgetStrings`,
+  /// `asyncWithoutAwait`, `bareCalls`, `tlsBypasses`, `databaseCalls`,
+  /// `insecureStores`, `parseErrors`, and `ignores` are the facts
+  /// collected from this file. `importedPackages` lists `package:`
+  /// names. `futureFunctions` maps each top-level function to a
+  /// syntactic future return type. `importsSharedPreferences` reports
+  /// a `shared_preferences` import.
   const DartFileFacts({
     required this.path,
     required this.generated,
@@ -289,40 +693,156 @@ final class DartFileFacts {
     required this.importsSharedPreferences,
   });
 
+  /// Project-relative POSIX path of this file.
+  ///
+  /// This is the path used by [DartIndex]'s subscript lookup.
   final String path;
+
+  /// Whether the file is treated as generated.
+  ///
+  /// True when the path ends in `.g.dart`, `.freezed.dart`, or
+  /// `.gr.dart`, or when the contents include `// GENERATED CODE` or
+  /// `// Generated by`.
   final bool generated;
+
+  /// Import directives in source order, after unused-import checks.
   final List<ImportFact> imports;
+
+  /// Export directives in source order.
   final List<ExportFact> exports;
+
+  /// Simple-identifier names found outside import and export directives.
+  ///
+  /// Import and export clauses are not walked, so a name that appears
+  /// only in `show`, `hide`, or an import prefix is not a use.
   final Set<String> identifiers;
+
+  /// Declared names in this file that do not start with `_`.
+  ///
+  /// Includes classes, enums, mixins, named extensions, typedefs,
+  /// functions, and top-level variables. Nested functions are included.
+  /// Methods, fields, and unnamed extensions are not.
   final Set<String> publicNames;
+
+  /// `TODO`, `FIXME`, `HACK`, and `XXX` comments, in source order.
   final List<CommentFact> comments;
+
+  /// Functions, methods, and constructors that have a body.
   final List<MethodFact> methods;
+
+  /// Class declarations in source order.
   final List<ClassFact> classes;
+
+  /// Catch clauses in source order.
   final List<CatchFact> catches;
+
+  /// Unqualified `print` and `debugPrint` calls.
+  ///
+  /// Sensitive calls in this list are the same instances also stored
+  /// in `sensitiveLogs`.
   final List<InvocationFact> prints;
+
+  /// Logging calls whose arguments match a sensitive word.
+  ///
+  /// Includes sensitive entries from `prints`, plus any `log` call,
+  /// with or without a receiver, whose argument matches.
   final List<InvocationFact> sensitiveLogs;
+
+  /// String literals of at most 2000 characters.
   final List<StringFact> strings;
+
+  /// String literals collected from widget text and label arguments.
   final List<WidgetStringFact> widgetStrings;
+
+  /// Async callables whose bodies contain no `await`.
   final List<AsyncFact> asyncWithoutAwait;
+
+  /// Statement-level calls written with no target.
   final List<BareCallFact> bareCalls;
+
+  /// Uses of `badCertificateCallback` or `onBadCertificate`.
+  ///
+  /// Both calls and assignments are included. An assignment matches a
+  /// simple name, a prefixed name, or a property access.
   final List<LocationFact> tlsBypasses;
+
+  /// Calls named `rawQuery`, `rawInsert`, `rawUpdate`, `rawDelete`, or
+  /// `openDatabase`.
   final List<LocationFact> databaseCalls;
+
+  /// Sensitive `shared_preferences` writes in this file.
   final List<StorageFact> insecureStores;
+
+  /// Parser diagnostics for this file. Indexing still returns the file.
   final List<ParseFact> parseErrors;
+
+  /// Comments in this file that contain `flutterguard:ignore`.
   final List<InlineIgnore> ignores;
+
+  /// Package names imported through `package:` URIs.
+  ///
+  /// The name is the first segment after `package:`, or the whole
+  /// remainder when the URI has no slash. Empty names are omitted.
   final Set<String> importedPackages;
+
+  /// Top-level functions mapped to a syntactic future return type.
+  ///
+  /// The key is the function name and can start with `_`. The value is
+  /// true when the written return type's name is `Future` or
+  /// `FutureOr`. Local functions and methods are omitted.
   final Map<String, bool> futureFunctions;
+
+  /// Whether this file imports the `shared_preferences` package.
+  ///
+  /// True when a `package:` import's first segment is exactly
+  /// `shared_preferences`.
   final bool importsSharedPreferences;
 
+  /// Whether any class in `classes` is a widget or `State` type.
+  ///
+  /// Returns true when [ClassFact.isWidget] is true for at least one
+  /// class. Returns false when `classes` is empty. The getter has no
+  /// side effects.
   bool get containsWidget => classes.any((item) => item.isWidget);
 }
 
+/// Parsed Dart files for one package, and the import cycles among them.
+///
+/// [buildDartIndex] parses project files. This constructor stores
+/// facts that are already collected. The subscript operator finds
+/// one file by its project-relative path.
+///
+/// ```dart
+/// final index = buildDartIndex(
+///   files: indexedFiles,
+///   packageName: 'my_app',
+/// );
+/// final direct = DartIndex(files: index.files, cycles: index.cycles);
+/// final DartFileFacts? facts = direct['lib/main.dart'];
+/// ```
 final class DartIndex {
+  /// Creates an index from facts that are already collected.
+  ///
+  /// Both parameters are required and are stored as given. `files` is
+  /// the per-file facts. `cycles` is the canonical import-cycle text.
+  /// Parsing and cycle detection are performed by [buildDartIndex].
   const DartIndex({required this.files, required this.cycles});
 
+  /// Facts for each parsed Dart file, in the order they were parsed.
   final List<DartFileFacts> files;
+
+  /// Canonical descriptions of import cycles.
+  ///
+  /// Each entry joins file paths with ` -> ` and closes the cycle by
+  /// repeating the first path. A cycle and its reverse
+  /// collapse to the lexicographically smallest rotation. The list is
+  /// sorted. Edges come from import targets only; exports add none.
   final List<String> cycles;
 
+  /// Returns the first [DartFileFacts] whose path equals `path`.
+  ///
+  /// Files are compared in list order. The result is null when no file
+  /// has that path.
   DartFileFacts? operator [](String path) {
     for (final file in files) {
       if (file.path == path) {
@@ -333,6 +853,17 @@ final class DartIndex {
   }
 }
 
+/// Parses Dart sources into a [DartIndex].
+///
+/// `files` is only read. An entry is parsed when its `relativePosix`
+/// path ends in `.dart` and its `text` is non-null; every other
+/// entry is skipped. Parsed files keep their input order.
+/// `packageName` selects which `package:` URIs [resolveDartUri]
+/// maps into `lib/`. Both parameters are required.
+///
+/// Syntax diagnostics are stored as [ParseFact] values on each
+/// [DartFileFacts]. The returned index holds those files and the
+/// import cycles among their resolved import targets.
 DartIndex buildDartIndex({
   required List<IndexedFile> files,
   required String packageName,
@@ -699,6 +1230,22 @@ String _rotation(List<String> body) {
   return best;
 }
 
+/// Maps an import or export URI to a project-relative POSIX path.
+///
+/// `fromPath` is the file that contains the URI. `uri` is the URI
+/// text. `packageName` is this package's name. All three parameters
+/// are required.
+///
+/// Returns null for a `dart:` URI. A `package:` URI returns `lib/`
+/// plus the remaining path when the segment before `/` equals
+/// `packageName`. A different package, a missing `/`, or an empty
+/// package segment returns null. Any other URI that contains `:`
+/// returns null.
+///
+/// Any remaining URI is joined onto the directory of `fromPath` and
+/// normalized with POSIX rules. An absolute URI replaces that
+/// directory. The normalized path is returned unless it is `..` or
+/// begins with `../`.
 String? resolveDartUri({
   required String fromPath,
   required String uri,

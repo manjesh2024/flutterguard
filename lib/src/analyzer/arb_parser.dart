@@ -1,6 +1,11 @@
 import 'dart:convert';
 
+/// One user-facing string from an ARB file, with the ICU shape of its text.
 final class ArbMessage {
+  /// Creates a message. Every argument is required.
+  ///
+  /// key is the ARB id and value is the raw message text. placeholders, kind,
+  /// and cases describe ICU syntax found in that text.
   const ArbMessage({
     required this.key,
     required this.value,
@@ -9,14 +14,31 @@ final class ArbMessage {
     required this.cases,
   });
 
+  /// ARB message id. Metadata keys that start with `@` are not stored.
   final String key;
+
+  /// Raw message text, including any ICU placeholder syntax.
   final String value;
+
+  /// Names of `{placeholder}` segments in value, including plural and select
+  /// arguments.
   final Set<String> placeholders;
+
+  /// The last `plural` or `select` keyword in value, or null when neither
+  /// appears.
   final String? kind;
+
+  /// Case labels gathered from every `plural` or `select` placeholder in
+  /// value, such as `one` or `other`.
   final Set<String> cases;
 }
 
+/// Parsed ARB file: locale, messages, repeated keys, and any JSON error.
 final class ArbCatalog {
+  /// Creates a catalog for the file at path. Every argument is required.
+  ///
+  /// error is null when text parsed as a JSON object. On failure, messages
+  /// and duplicateKeys are empty while path and locale are still set.
   const ArbCatalog({
     required this.path,
     required this.locale,
@@ -25,13 +47,34 @@ final class ArbCatalog {
     required this.error,
   });
 
+  /// Project-relative path of the ARB file that was parsed.
   final String path;
+
+  /// Locale from a `@@locale` string, otherwise a `_locale.arb` suffix in
+  /// the file name, otherwise the file name itself.
   final String locale;
+
+  /// String messages keyed by id. Keys starting with `@`, and values that
+  /// are not strings, are omitted.
   final Map<String, ArbMessage> messages;
+
+  /// Top-level keys, other than `@` metadata, each extra time they appear.
+  ///
+  /// Empty when JSON parsing fails, even if repeated keys were seen first.
   final List<String> duplicateKeys;
+
+  /// FormatException message when text is not a JSON object. Null after a
+  /// successful parse.
   final String? error;
 }
 
+/// Parses the ARB document text located at path.
+///
+/// Locale is resolved before decoding. Repeated top-level keys are collected
+/// with a scan that still sees duplicates JSON decoding would collapse.
+/// Malformed JSON, and a JSON value that is not an object, returns a catalog
+/// whose error is the format message and whose message map is empty. This
+/// does not throw FormatException.
 ArbCatalog parseArb(String path, String text) {
   final locale = _locale(path, text);
   try {

@@ -4,25 +4,44 @@ import '../core/config.dart';
 import '../core/finding.dart';
 import '../core/glob.dart';
 
+/// A finding removed from the active set, with the reason that matched.
 final class SuppressedFinding {
+  /// Pairs [finding] with the suppression [reason] that hid it.
   const SuppressedFinding({required this.finding, required this.reason});
 
+  /// Finding that will not appear in the active report.
   final Finding finding;
+
+  /// Reason from the matching config entry or inline ignore comment.
   final String reason;
 
+  /// JSON object with `reason` and the nested finding document.
   Map<String, Object?> toJson() => {
     'reason': reason,
     'finding': finding.toJson(),
   };
 }
 
+/// Active findings and the findings removed by suppression.
 final class SuppressionResult {
+  /// Stores [active] findings and the [suppressed] ones with reasons.
   const SuppressionResult({required this.active, required this.suppressed});
 
+  /// Findings that no config entry or inline ignore matched.
   final List<Finding> active;
+
+  /// Findings matched by a config suppression or a valid inline ignore.
   final List<SuppressedFinding> suppressed;
 }
 
+/// Splits [findings] into active and suppressed using config and inline ignores.
+///
+/// Config suppressions are checked first. A policy matches when its rule and
+/// fingerprint are either unset or equal to the finding, and when its path
+/// glob is unset or matches the finding path. Inline ignores apply only when
+/// the finding has a line, the ignore names the same rule and path, and the
+/// ignore sits on that line or the line above. [projects] supplies the inline
+/// comments. Both returned lists keep input order. [findings] is not modified.
 SuppressionResult applySuppressions({
   required List<Finding> findings,
   required FlutterGuardConfig config,

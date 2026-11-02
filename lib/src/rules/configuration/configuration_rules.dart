@@ -6,6 +6,12 @@ import '../rule.dart';
 
 final _urlPattern = RegExp(r'https?://[^\s<>]+', caseSensitive: false);
 
+/// Heuristic that reports URL literals outside the configured host allow list.
+///
+/// Generated files are skipped. A URL whose host is empty is ignored. A host
+/// matches an allow-list entry when it equals that entry or ends with
+/// `.<entry>`, compared without case. Matches under `test/` are reported at
+/// low severity; other matches use medium.
 final class HardcodedEndpointRule implements AuditRule {
   @override
   String get id => 'FG-CFG-001';
@@ -72,6 +78,12 @@ final class HardcodedEndpointRule implements AuditRule {
   }
 }
 
+/// Heuristic that a release marker shares a file with a non-production URL.
+///
+/// Generated files are skipped. The file text must contain `kReleaseMode` or
+/// a `prod` or `production` string literal. URL hosts containing `staging`,
+/// `sandbox`, or `localhost`, starting with `dev.`, or containing `.dev` are
+/// treated as non-production.
 final class EnvironmentMismatchRule implements AuditRule {
   @override
   String get id => 'FG-CFG-002';
@@ -146,6 +158,12 @@ final class EnvironmentMismatchRule implements AuditRule {
   }
 }
 
+/// Reports an application id or bundle identifier shared by more than one app.
+///
+/// Runs only when this project is the first project in the workspace, so the
+/// same collision is emitted once. Android application ids and iOS bundle
+/// identifiers from every workspace project are grouped, and an id owned by
+/// two or more package names is reported.
 final class DuplicateIdentifierRule implements AuditRule {
   @override
   String get id => 'FG-CFG-003';
@@ -201,6 +219,10 @@ final class DuplicateIdentifierRule implements AuditRule {
   }
 }
 
+/// Reports debuggable release Gradle types and debuggable Android manifests.
+///
+/// A Gradle file whose release build type is debuggable, and a manifest with
+/// `android:debuggable="true"`, each produce one finding.
 final class DebugReleaseRule implements AuditRule {
   @override
   String get id => 'FG-CFG-004';
@@ -252,6 +274,12 @@ final class DebugReleaseRule implements AuditRule {
   }
 }
 
+/// Heuristic that hardcoded URLs exist without an environment switch.
+///
+/// Emits one finding when a non-generated file outside `test/` contains a
+/// URL and the project has no `fromEnvironment` identifier, no
+/// `flutter_dotenv` import, and no `.env` file. Otherwise it returns no
+/// findings.
 final class MissingEnvironmentRule implements AuditRule {
   @override
   String get id => 'FG-CFG-005';
@@ -307,6 +335,11 @@ final class MissingEnvironmentRule implements AuditRule {
   }
 }
 
+/// Reports a `minSdk` below 21 and a release build with minify left off.
+///
+/// A `minSdk` under 21 is reported at medium severity. `releaseMinify` equal
+/// to false is reported at the rule default. A missing minify value is not
+/// reported.
 final class BuildConfigurationRule implements AuditRule {
   @override
   String get id => 'FG-CFG-006';
@@ -367,6 +400,7 @@ String? _source(RuleScope scope, DartFileFacts file) {
   return null;
 }
 
+/// Built-in configuration rules, in a stable evaluation order.
 List<AuditRule> configurationRules() => [
   HardcodedEndpointRule(),
   EnvironmentMismatchRule(),

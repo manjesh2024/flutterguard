@@ -1,6 +1,11 @@
 import 'package:yaml/yaml.dart';
 
+/// One package declared under `dependencies` or `dev_dependencies`.
 final class DependencyInfo {
+  /// Creates a dependency. Every argument is required.
+  ///
+  /// constraint is the version string when one was written, and null when
+  /// the entry has no version.
   const DependencyInfo({
     required this.name,
     required this.source,
@@ -9,11 +14,26 @@ final class DependencyInfo {
 
   /// `hosted`, `sdk`, `path`, or `git`.
   final String name;
+
+  /// Where the package is fetched from.
+  ///
+  /// A string entry is `hosted`. A map is `sdk` when `sdk` is set, otherwise
+  /// `path` when `path` is set, otherwise `git` when `git` is set, and
+  /// otherwise `hosted`.
   final String source;
+
+  /// Version constraint. A string dependency uses that string. A map
+  /// dependency uses its `version` string, or null when `version` is missing
+  /// or not a string.
   final String? constraint;
 }
 
+/// Package name, dependencies, Flutter assets, and publish fields from a
+/// pubspec.yaml document.
 final class PubspecInfo {
+  /// Creates pubspec data. Every argument is required.
+  ///
+  /// error is null when the document was read as a mapping.
   const PubspecInfo({
     required this.name,
     required this.dependencies,
@@ -25,15 +45,34 @@ final class PubspecInfo {
     required this.error,
   });
 
+  /// Package `name`, or `unknown` when that field is missing or not a string.
   final String name;
+
+  /// Packages under `dependencies`, sorted by name.
   final List<DependencyInfo> dependencies;
+
+  /// Packages under `dev_dependencies`, sorted by name.
   final List<DependencyInfo> devDependencies;
+
+  /// String paths under `flutter: assets:`. Non-string entries are skipped.
   final List<String> assets;
+
+  /// `license` when it is a string; otherwise null.
   final String? license;
+
+  /// `publish_to` when it is a string; otherwise null.
   final String? publishTo;
+
+  /// True when the top-level `flutter` value is not null.
   final bool flutterSection;
+
+  /// Why the document could not be read, or null when it was a mapping.
   final String? error;
 
+  /// Placeholder for a project that has no pubspec.yaml.
+  ///
+  /// name is `unknown`, the lists are empty, flutterSection is false, and
+  /// error is `pubspec.yaml is missing.`.
   static const empty = PubspecInfo(
     name: 'unknown',
     dependencies: [],
@@ -46,6 +85,12 @@ final class PubspecInfo {
   );
 }
 
+/// Reads a pubspec.yaml document from text.
+///
+/// Returns a result whose error is `pubspec.yaml must be a mapping.` when
+/// the document is not a YAML map. YamlException is caught and its message
+/// is stored in error. Both failures use the name `unknown` and empty lists.
+/// Dependency lists from a successful read are sorted by package name.
 PubspecInfo readPubspec(String text) {
   try {
     final loaded = loadYaml(text);
@@ -130,18 +175,35 @@ List<DependencyInfo> _deps(Object? value) {
   return dependencies;
 }
 
+/// One package pinned under `packages` in a pubspec.lock file.
 final class LockedPackage {
+  /// Creates a locked package. Every argument is required.
+  ///
+  /// direct is true when the lockfile marks the package `direct main` or
+  /// `direct dev`.
   const LockedPackage({
     required this.name,
     required this.version,
     required this.direct,
   });
 
+  /// Package name from the lockfile `packages` map.
   final String name;
+
+  /// Version string pinned for name.
   final String version;
+
+  /// True when the lockfile `dependency` field is `direct main` or
+  /// `direct dev`.
   final bool direct;
 }
 
+/// Reads pinned packages from a pubspec.lock document.
+///
+/// Returns an empty list when text is not a YAML map or `packages` is not a
+/// map. Entries that are not maps, or that have no string `version`, are
+/// skipped. The returned list is sorted by package name. Invalid YAML throws
+/// YamlException, which is a FormatException.
 List<LockedPackage> readLockFile(String text) {
   final loaded = loadYaml(text);
   if (loaded is! YamlMap || loaded['packages'] is! YamlMap) {
