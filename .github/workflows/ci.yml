@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - name: Release verification
+        run: ./tool/verify_all.sh
+      - name: Upload verification logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verify-${{ matrix.os }}
+          path: build/verify/
+
+  windows:
+    name: Windows Dart tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - run: dart pub get
+      - run: dart format --output=none --set-exit-if-changed .
+      - run: dart analyze --fatal-infos
+      - run: dart test test integration_test
+
+  flutter:
+    name: Flutter stable SDK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: dart pub get
+      - run: dart analyze --fatal-infos
+      - run: dart test test integration_test
+
+  sarif:
+    name: SARIF artifact
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - run: dart pub get
+      - name: Scan the security fixture
+        shell: bash
+        run: |
+          set +e
+          dart run bin/flutterguard.dart test/fixtures/security_app --offline
+          code=$?
+          set -e
+          if [ "$code" -gt 1 ]; then
+            exit "$code"
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flutterguard-sarif
+          path: test/fixtures/security_app/build/flutterguard/report.sarif

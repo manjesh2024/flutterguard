@@ -1,0 +1,367 @@
+import '../../core/config.dart';
+import '../../core/finding.dart';
+import '../../core/severity.dart';
+import '../rule.dart';
+
+final class AndroidPlatformRule implements AuditRule {
+  @override
+  String get id => 'FG-PLAT-001';
+  @override
+  String get title => 'Android project';
+  @override
+  String get category => 'platform';
+  @override
+  Severity get defaultSeverity => Severity.medium;
+  @override
+  bool get heuristic => false;
+  @override
+  AuditModule get module => AuditModule.platform;
+  @override
+  String get description =>
+      'Checks an existing android/ directory for a manifest and exported components without intent filters.';
+  @override
+  String get recommendation =>
+      'Add the missing manifest entry or an intent filter before exporting a component.';
+
+  @override
+  List<Finding> evaluate(RuleScope scope) {
+    if (!scope.project.platforms.contains('android')) {
+      return const [];
+    }
+    final findings = <Finding>[];
+    if (scope.project.manifests.isEmpty) {
+      findings.add(
+        emit(
+          this,
+          scope,
+          message: 'android/ has no AndroidManifest.xml.',
+          path: 'android',
+        ),
+      );
+    }
+    for (final manifest in scope.project.manifests) {
+      if (manifest.error != null) {
+        findings.add(
+          emit(
+            this,
+            scope,
+            message:
+                'AndroidManifest.xml could not be parsed: ${manifest.error}',
+            path: manifest.path,
+          ),
+        );
+      }
+      if (manifest.label == null) {
+        findings.add(
+          emit(
+            this,
+            scope,
+            message: 'Android application label is missing.',
+            path: manifest.path,
+          ),
+        );
+      }
+      for (final component in manifest.exportedActivitiesWithoutIntent) {
+        findings.add(
+          emit(
+            this,
+            scope,
+            message: 'Exported component $component has no intent filter.',
+            path: manifest.path,
+            heuristic: true,
+          ),
+        );
+      }
+    }
+    return findings;
+  }
+}
+
+final class IosPlatformRule implements AuditRule {
+  @override
+  String get id => 'FG-PLAT-002';
+  @override
+  String get title => 'iOS project';
+  @override
+  String get category => 'platform';
+  @override
+  Severity get defaultSeverity => Severity.medium;
+  @override
+  bool get heuristic => false;
+  @override
+  AuditModule get module => AuditModule.platform;
+  @override
+  String get description =>
+      'Checks an existing ios/ directory for Info.plist identity and empty privacy strings.';
+  @override
+  String get recommendation =>
+      'Set the bundle identifier and a non-empty usage description for every privacy key.';
+
+  @override
+  List<Finding> evaluate(RuleScope scope) {
+    if (!scope.project.platforms.contains('ios')) {
+      return const [];
+    }
+    final findings = <Finding>[];
+    final hasPlist = scope.project.files.files.any(
+      (file) => file.relativePosix.endsWith('Info.plist'),
+    );
+    if (!hasPlist) {
+      findings.add(
+        emit(
+          this,
+          scope,
+          message: 'ios/ has no Info.plist.',
+          path: 'ios',
+          severity: Severity.high,
+        ),
+      );
+    }
+    if (scope.project.bundleIdentifiers.isEmpty) {
+      findings.add(
+        emit(
+          this,
+          scope,
+          message: 'iOS bundle identifier was not found.',
+          path: 'ios',
+          severity: Severity.high,
+        ),
+      );
+    }
+    if (!scope.project.names.any(
+      (name) => name.source.contains('ios') || name.source.endsWith('.plist'),
+    )) {
+      findings.add(
+        emit(
+          this,
+          scope,
+          message: 'iOS display name was not found.',
+          path: 'ios',
+        ),
+      );
+    }
+    for (final key in scope.project.emptyPrivacyKeys) {
+      findings.add(
+        emit(
+          this,
+          scope,
+          message: '$key is empty.',
+          path: 'ios/Runner/Info.plist',
+        ),
+      );
+    }
+    for (final error in scope.project.plistErrors) {
+      findings.add(emit(this, scope, message: error, path: 'ios'));
+    }
+    return findings;
+  }
+}
+
+final class WebPlatformRule implements AuditRule {
+  @override
+  String get id => 'FG-PLAT-003';
+  @override
+  String get title => 'Web project';
+  @override
+  String get category => 'platform';
+  @override
+  Severity get defaultSeverity => Severity.medium;
+  @override
+  bool get heuristic => false;
+  @override
+  AuditModule get module => AuditModule.platform;
+  @override
+  String get description =>
+      'Checks an existing web/ directory for index.html and manifest.json.';
+  @override
+  String get recommendation =>
+      'Restore the Flutter web template files before building for web.';
+
+  @override
+  List<Finding> evaluate(RuleScope scope) {
+    if (!scope.project.platforms.contains('web')) {
+      return const [];
+    }
+    final findings = <Finding>[];
+    if (!scope.project.containsRelative('web/index.html')) {
+      findings.add(
+        emit(
+          this,
+          scope,
+          message: 'web/index.html is missing.',
+          path: 'web',
+          severity: Severity.high,
+        ),
+      );
+    }
+    if (!scope.project.containsRelative('web/manifest.json')) {
+      findings.add(
+        emit(
+          this,
+          scope,
+          message: 'web/manifest.json is missing.',
+          path: 'web',
+        ),
+      );
+    }
+    return findings;
+  }
+}
+
+final class WindowsPlatformRule implements AuditRule {
+  @override
+  String get id => 'FG-PLAT-004';
+  @override
+  String get title => 'Windows project';
+  @override
+  String get category => 'platform';
+  @override
+  Severity get defaultSeverity => Severity.medium;
+  @override
+  bool get heuristic => false;
+  @override
+  AuditModule get module => AuditModule.platform;
+  @override
+  String get description =>
+      'Checks an existing windows/ directory for CMake and Runner.rc.';
+  @override
+  String get recommendation => 'Restore the Flutter windows runner files.';
+
+  @override
+  List<Finding> evaluate(RuleScope scope) => _desktop(
+    this,
+    scope,
+    'windows',
+    'windows/CMakeLists.txt',
+    'windows/runner/Runner.rc',
+  );
+}
+
+final class MacosPlatformRule implements AuditRule {
+  @override
+  String get id => 'FG-PLAT-005';
+  @override
+  String get title => 'macOS project';
+  @override
+  String get category => 'platform';
+  @override
+  Severity get defaultSeverity => Severity.medium;
+  @override
+  bool get heuristic => false;
+  @override
+  AuditModule get module => AuditModule.platform;
+  @override
+  String get description =>
+      'Checks an existing macos/ directory for the Xcode project and bundle identifier.';
+  @override
+  String get recommendation =>
+      'Restore the Flutter macOS runner and set PRODUCT_BUNDLE_IDENTIFIER.';
+
+  @override
+  List<Finding> evaluate(RuleScope scope) {
+    if (!scope.project.platforms.contains('macos')) {
+      return const [];
+    }
+    final findings = <Finding>[];
+    final hasProject = scope.project.files.files.any(
+      (file) =>
+          file.relativePosix.contains('macos/') &&
+          file.relativePosix.endsWith('.pbxproj'),
+    );
+    if (!hasProject) {
+      findings.add(
+        emit(
+          this,
+          scope,
+          message: 'macos/ has no Xcode project.',
+          path: 'macos',
+        ),
+      );
+    }
+    final hasBundle = scope.project.files.files.any((file) {
+      if (!file.relativePosix.startsWith('macos/') || file.text == null) {
+        return false;
+      }
+      return file.text!.contains('PRODUCT_BUNDLE_IDENTIFIER');
+    });
+    if (!hasBundle) {
+      findings.add(
+        emit(
+          this,
+          scope,
+          message: 'macOS PRODUCT_BUNDLE_IDENTIFIER was not found.',
+          path: 'macos',
+        ),
+      );
+    }
+    return findings;
+  }
+}
+
+final class LinuxPlatformRule implements AuditRule {
+  @override
+  String get id => 'FG-PLAT-006';
+  @override
+  String get title => 'Linux project';
+  @override
+  String get category => 'platform';
+  @override
+  Severity get defaultSeverity => Severity.medium;
+  @override
+  bool get heuristic => false;
+  @override
+  AuditModule get module => AuditModule.platform;
+  @override
+  String get description =>
+      'Checks an existing linux/ directory for CMake and my_application.cc.';
+  @override
+  String get recommendation => 'Restore the Flutter Linux runner files.';
+
+  @override
+  List<Finding> evaluate(RuleScope scope) => _desktop(
+    this,
+    scope,
+    'linux',
+    'linux/CMakeLists.txt',
+    'linux/runner/my_application.cc',
+  );
+}
+
+List<Finding> _desktop(
+  AuditRule rule,
+  RuleScope scope,
+  String platform,
+  String cmake,
+  String entry,
+) {
+  if (!scope.project.platforms.contains(platform)) {
+    return const [];
+  }
+  final findings = <Finding>[];
+  if (!scope.project.containsRelative(cmake)) {
+    findings.add(
+      emit(
+        rule,
+        scope,
+        message: '$cmake is missing.',
+        path: platform,
+        severity: Severity.high,
+      ),
+    );
+  }
+  if (!scope.project.containsRelative(entry)) {
+    findings.add(
+      emit(rule, scope, message: '$entry is missing.', path: platform),
+    );
+  }
+  return findings;
+}
+
+List<AuditRule> platformRules() => [
+  AndroidPlatformRule(),
+  IosPlatformRule(),
+  WebPlatformRule(),
+  WindowsPlatformRule(),
+  MacosPlatformRule(),
+  LinuxPlatformRule(),
+];

@@ -1,0 +1,6 @@
+version: 1
+localization:
+  requiredLocales:
+    - en
+    - es
+    - fr

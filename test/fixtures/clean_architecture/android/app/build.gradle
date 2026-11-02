@@ -1,0 +1,12 @@
+android {
+    defaultConfig {
+        applicationId "com.clean.architecture"
+        minSdk 24
+    }
+    buildTypes {
+        release {
+            debuggable false
+            minifyEnabled true
+        }
+    }
+}

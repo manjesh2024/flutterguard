@@ -1,0 +1,29 @@
+# Dart / Flutter tooling
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+coverage/
+doc/api/
+
+# FlutterGuard local output and fix backups
+.flutterguard/
+.flutterguard-baseline.json
+
+# Editor and OS files
+.idea/
+.vscode/
+*.iml
+.DS_Store
+*.log
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+credentials.json
+pubspec_overrides.yaml

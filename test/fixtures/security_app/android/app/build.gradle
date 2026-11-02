@@ -1,0 +1,12 @@
+android {
+    defaultConfig {
+        applicationId "com.security.app"
+        minSdk 24
+    }
+    buildTypes {
+        release {
+            debuggable true
+            minifyEnabled false
+        }
+    }
+}

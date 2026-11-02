@@ -1,0 +1,7 @@
+{
+  "@@locale": "en",
+  "hello": "Hello {name}",
+  "hello": "Hello again {name}",
+  "items": "{count, plural, one{1 item} other{{count} items}}",
+  "onlyEn": "Only English"
+}
