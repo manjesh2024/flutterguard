@@ -1,0 +1,4 @@
+name: guard_examples_workspace
+packages:
+  - apps/*
+  - packages/*

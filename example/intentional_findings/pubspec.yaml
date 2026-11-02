@@ -1,0 +1,12 @@
+name: intentional_findings
+description: Controlled sample of deliberate FlutterGuard findings.
+publish_to: none
+version: 0.1.0
+environment:
+  sdk: ^3.13.0
+dependencies:
+  flutter:
+    sdk: flutter
+  collection: ^1.19.0
+flutter:
+  uses-material-design: true

@@ -1,6 +1,13 @@
+# Canonical FlutterGuard configuration.
+# Copy this file to the root of a Flutter application as .flutterguard.yaml.
+# When that file is absent, FlutterGuard uses built-in defaults and does not
+# fail the scan. Unknown keys are errors. This sample matches `flutterguard init`.
 version: 1
 
 discovery:
+  # auto walks the tree and also reads melos.yaml and a pub workspace.
+  # single reads only the directory you scanned.
+  # monorepo fails if that walk finds no Flutter project.
   mode: auto
   roots: []
   maxDepth: 4
@@ -8,17 +15,32 @@ discovery:
 include:
   - "**/*.dart"
   - "**/*.yaml"
+  - "**/*.yml"
+  - "**/pubspec.lock"
   - "**/*.xml"
   - "**/*.plist"
   - "**/*.gradle"
+  - "**/*.kts"
   - "**/*.arb"
+  - "**/*.html"
+  - "**/*.json"
   - "**/*.png"
+  - "**/*.jpg"
+  - "**/*.webp"
   - "**/*.svg"
+  - "**/*.xcconfig"
+  - "**/*.pbxproj"
+  - "**/CMakeLists.txt"
+  - "**/.env"
 
 exclude:
   - "**/.dart_tool/**"
   - "**/build/**"
   - "**/.git/**"
+  - "**/ios/Pods/**"
+  - "**/android/.gradle/**"
+  - "**/.symlinks/**"
+  - "**/ephemeral/**"
 
 modules:
   branding: true
@@ -31,6 +53,8 @@ modules:
   platform: true
 
 architecture:
+  # none, clean, featureFirst, or custom.
+  # none does not assume Clean Architecture, BLoC, Riverpod, or Provider.
   profile: none
   featureCoupling: true
   businessLogicComplexity: 12
@@ -39,6 +63,12 @@ codeQuality:
   complexityThreshold: 15
   classLineThreshold: 300
   methodLineThreshold: 80
+
+allowedHosts:
+  - localhost
+  - 127.0.0.1
+  - 10.0.2.2
+  - example.com
 
 severity:
   minReport: info
@@ -65,6 +95,8 @@ qualityGate:
   failOn:
     - high
     - critical
+  maxFindings: null
+  maxNewFindings: null
 
 network:
   outdatedChecks: false

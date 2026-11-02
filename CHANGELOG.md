@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1
+
+- Add runnable public examples: a Flutter application, a workspace, a controlled findings sample, and a library program that uses the existing scan API.
+- Document installation, configuration, reports, baselines, suppression, auto-fix, and exit codes in the example README that pub.dev shows on the Example tab.
+- Run those examples from `tool/verify_all.sh`. The checks need the Flutter SDK.
+
 ## 0.2.0
 
 - Compare customer-facing display names. Flutter engine plists are ignored, Xcode `PRODUCT_NAME` values are resolved, and spacing differences such as `Smoke App` and `smoke_app` match. Flavor-specific names stay out of that comparison.

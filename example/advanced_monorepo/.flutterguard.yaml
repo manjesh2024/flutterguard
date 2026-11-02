@@ -1,0 +1,28 @@
+version: 1
+
+# Monorepo scan. Roots are empty, so discovery walks this directory and
+# also reads melos.yaml plus the pub workspace list above.
+discovery:
+  mode: monorepo
+  roots: []
+  maxDepth: 4
+
+# Setting exclude replaces the default list. Keep the tool directories
+# and add generated code that should not be audited.
+exclude:
+  - "**/.dart_tool/**"
+  - "**/build/**"
+  - "**/.git/**"
+  - "**/ios/Pods/**"
+  - "**/android/.gradle/**"
+  - "**/.symlinks/**"
+  - "**/ephemeral/**"
+  - "**/generated/**"
+
+architecture:
+  profile: featureFirst
+  featureCoupling: true
+
+network:
+  outdatedChecks: false
+  vulnerabilityChecks: false

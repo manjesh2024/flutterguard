@@ -1,0 +1,21 @@
+version: 1
+
+discovery:
+  mode: single
+
+architecture:
+  profile: clean
+
+localization:
+  requiredLocales:
+    - en
+    - es
+
+suppressions:
+  - rule: FG-QUAL-004
+    path: lib/review.dart
+    reason: The sample keeps one TODO so the suppression section can show a reasoned hide.
+
+network:
+  outdatedChecks: false
+  vulnerabilityChecks: false

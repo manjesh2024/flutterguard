@@ -18,6 +18,12 @@ doc/api/
 .DS_Store
 *.log
 
+# Flutter tool output. These files record the local SDK path.
+android/local.properties
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/Flutter/ephemeral/
+
 # Local environment and secrets
 .env
 .env.*

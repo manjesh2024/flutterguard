@@ -45,6 +45,11 @@ stage_shell() {
 echo "FlutterGuard verification"
 echo "Root: $ROOT"
 dart --version
+if ! command -v flutter >/dev/null 2>&1; then
+  echo "flutter is required on PATH for the example application checks."
+  exit 1
+fi
+flutter --version
 echo ""
 
 stage dependency_resolution dart pub get
@@ -65,6 +70,82 @@ stage report_generation_tests dart test test/scan_test.dart --name "reports are 
 stage autofix_tests dart test test/cli_safety_test.dart --name "auto-fix"
 stage secret_redaction_tests dart test test/core_test.dart test/scan_test.dart --name "redact"
 stage monorepo_tests dart test test/scan_test.dart --name "monorepo"
+
+stage_shell basic_example_resolve '
+  set -euo pipefail
+  cd example/basic_flutter_app
+  flutter pub get
+'
+
+stage_shell basic_example_analyze '
+  set -euo pipefail
+  cd example/basic_flutter_app
+  flutter analyze
+'
+
+stage_shell basic_example_test '
+  set -euo pipefail
+  cd example/basic_flutter_app
+  flutter test
+'
+
+stage_shell example_scans '
+  set -euo pipefail
+  checksums() {
+    python3 - "$1" <<'"'"'PY'"'"'
+import hashlib, os, sys
+root = sys.argv[1]
+skip = {".dart_tool", "build", ".flutterguard"}
+digest = hashlib.sha256()
+for dirpath, dirnames, filenames in os.walk(root):
+    dirnames[:] = [name for name in dirnames if name not in skip]
+    for name in sorted(filenames):
+        path = os.path.join(dirpath, name)
+        relative = os.path.relpath(path, root)
+        digest.update(relative.encode())
+        digest.update(open(path, "rb").read())
+print(digest.hexdigest())
+PY
+  }
+  basic_before="$(checksums example/basic_flutter_app)"
+  intentional_before="$(checksums example/intentional_findings)"
+  monorepo_before="$(checksums example/advanced_monorepo)"
+  dart run bin/flutterguard.dart example/basic_flutter_app --offline
+  set +e
+  dart run bin/flutterguard.dart example/intentional_findings --offline
+  intentional_code=$?
+  set -e
+  if [[ "$intentional_code" -ne 1 ]]; then
+    echo "intentional sample expected exit 1, got $intentional_code"
+    exit 1
+  fi
+  dart run bin/flutterguard.dart example/advanced_monorepo --offline
+  dart run bin/flutterguard.dart --version
+  dart run bin/flutterguard.dart --help >/dev/null
+  dart run bin/flutterguard.dart doctor --path example/basic_flutter_app
+  dart run bin/flutterguard.dart rules list >/dev/null
+  dart run bin/flutterguard.dart rules explain FG-SEC-001 >/dev/null
+  dart run bin/flutterguard.dart fix --dry-run --path example/intentional_findings
+  init_dir="$(mktemp -d)"
+  dart run bin/flutterguard.dart init --path "$init_dir"
+  test -f "$init_dir/.flutterguard.yaml"
+  rm -rf "$init_dir"
+  basic_after="$(checksums example/basic_flutter_app)"
+  intentional_after="$(checksums example/intentional_findings)"
+  monorepo_after="$(checksums example/advanced_monorepo)"
+  if [[ "$basic_before" != "$basic_after" || "$intentional_before" != "$intentional_after" || "$monorepo_before" != "$monorepo_after" ]]; then
+    echo "example source changed during the documented commands"
+    exit 1
+  fi
+'
+
+stage_shell library_api_example '
+  set -euo pipefail
+  cd example/library_api
+  dart pub get
+  dart analyze --fatal-infos
+  dart run bin/main.dart
+'
 
 stage license_check dart run tool/check_licenses.dart
 stage publish_dry_run dart pub publish --dry-run
@@ -97,12 +178,26 @@ stage_shell git_hygiene '
   fi
   if grep -RInE "AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}|BEGIN [A-Z ]*PRIVATE KEY" \
       --exclude=verify_all.sh \
+      --exclude=local.properties \
+      --exclude=Generated.xcconfig \
+      --exclude=flutter_export_environment.sh \
+      --exclude-dir=ephemeral \
+      --exclude-dir=.dart_tool \
+      --exclude-dir=build \
+      --exclude-dir=.flutterguard \
       lib bin docs .github example tool README.md CHANGELOG.md pubspec.yaml; then
     echo "secret-shaped text in package source"
     exit 1
   fi
   if grep -RInE "/Users/|/Volumes/|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}" \
       --exclude=verify_all.sh \
+      --exclude=local.properties \
+      --exclude=Generated.xcconfig \
+      --exclude=flutter_export_environment.sh \
+      --exclude-dir=ephemeral \
+      --exclude-dir=.dart_tool \
+      --exclude-dir=build \
+      --exclude-dir=.flutterguard \
       lib bin docs .github example tool README.md CHANGELOG.md pubspec.yaml; then
     echo "machine path or email address in package source"
     exit 1

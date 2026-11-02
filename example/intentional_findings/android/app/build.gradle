@@ -1,0 +1,12 @@
+android {
+    defaultConfig {
+        applicationId "com.example.intentional"
+        minSdk 16
+    }
+    buildTypes {
+        release {
+            debuggable true
+            minifyEnabled false
+        }
+    }
+}

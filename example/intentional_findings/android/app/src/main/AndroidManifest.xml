@@ -1,0 +1,10 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.intentional">
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <application
+        android:label="Demo Android"
+        android:debuggable="true"
+        android:usesCleartextTraffic="true">
+        <activity android:name=".MainActivity" android:exported="true"/>
+    </application>
+</manifest>

@@ -1,6 +1,10 @@
 build/
 coverage/
 .dart_tool/
+android/local.properties
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/Flutter/ephemeral/
 .flutterguard/
 .github/
 docs/
@@ -11,4 +15,5 @@ FINAL_RELEASE_STATUS.md
 POST_PUBLICATION_REPORT.md
 API_DOCUMENTATION_REPORT.md
 ACCURACY_REPORT.md
+EXAMPLE_IMPLEMENTATION_REPORT.md
 doc/api/

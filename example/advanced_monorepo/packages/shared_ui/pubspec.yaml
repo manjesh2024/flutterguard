@@ -1,0 +1,13 @@
+name: shared_ui
+description: Shared Flutter widgets for the monorepo example.
+publish_to: none
+version: 0.1.0
+license: MIT
+resolution: workspace
+environment:
+  sdk: ^3.13.0
+dependencies:
+  flutter:
+    sdk: flutter
+flutter:
+  uses-material-design: true

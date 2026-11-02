@@ -1,0 +1,9 @@
+name: flutterguard_library_api_example
+description: Runs the public FlutterGuard library against the example apps.
+publish_to: none
+environment:
+  sdk: ^3.13.0
+dependencies:
+  flutterguard_audit:
+    path: ../..
+  path: ^1.9.1

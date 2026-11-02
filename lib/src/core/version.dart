@@ -1,5 +1,5 @@
 /// Published package version. Keep this aligned with `pubspec.yaml`.
-const String packageVersion = '0.2.0';
+const String packageVersion = '0.2.1';
 
 /// User-facing product name.
 const String toolName = 'FlutterGuard';

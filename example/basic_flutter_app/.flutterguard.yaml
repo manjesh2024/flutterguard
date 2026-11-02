@@ -1,0 +1,13 @@
+version: 1
+
+# Single-app scan. Omitted sections use FlutterGuard defaults.
+# The annotated copy of every field is example/flutterguard.yaml.
+discovery:
+  mode: single
+
+architecture:
+  profile: none
+
+network:
+  outdatedChecks: false
+  vulnerabilityChecks: false

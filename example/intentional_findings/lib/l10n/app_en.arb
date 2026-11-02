@@ -1,0 +1,5 @@
+{
+  "@@locale": "en",
+  "greeting": "Hello {name}",
+  "onlyEn": "English only"
+}
