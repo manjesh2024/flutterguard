@@ -1,6 +1,6 @@
 # Basic Flutter application
 
-This is a runnable Flutter app: `lib/main.dart`, a notes feature, a widget test, Android, iOS, and web metadata, and `.flutterguard.yaml`.
+This is a runnable Flutter app: `lib/main.dart`, a notes feature, a widget test, Android, iOS, and web metadata, and `flutterguard.yaml`. `flutter pub get` writes `pubspec.lock`. That file is not committed. A scan does not need it, and a cold pub cache would otherwise report a missing LICENSE file for a locked dependency.
 
 From the repository root:
 

@@ -54,7 +54,7 @@ void main() {
     );
     expect(_checksums(root), before);
     expect(execution.exitCode, ExitCodes.success, reason: _dump(execution));
-    expect(execution.report.findings, isEmpty);
+    expect(execution.report.findings, isEmpty, reason: _dump(execution));
   });
 
   test('intentional example reports the documented rules', () async {

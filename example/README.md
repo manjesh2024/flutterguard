@@ -30,7 +30,7 @@ export PATH="$PATH:$HOME/.pub-cache/bin"
 flutterguard --version
 ```
 
-`$HOME/.pub-cache/bin` is not on the default `PATH`. The version line looks like `flutterguard 0.2.1`.
+`$HOME/.pub-cache/bin` is not on the default `PATH`. The version line looks like `flutterguard 0.2.2`.
 
 From a checkout, without activating:
 

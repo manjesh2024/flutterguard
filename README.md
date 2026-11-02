@@ -16,7 +16,7 @@ The pub.dev package is `flutterguard_audit`. The terminal command is `fluttergua
 
 ## Installation
 
-`flutterguard_audit` is published on [pub.dev](https://pub.dev/packages/flutterguard_audit). The current release is 0.2.1.
+`flutterguard_audit` is published on [pub.dev](https://pub.dev/packages/flutterguard_audit). The current release is 0.2.2.
 
 ```bash
 dart pub global activate flutterguard_audit
@@ -29,7 +29,7 @@ export PATH="$PATH:$HOME/.pub-cache/bin"
 flutterguard --version
 ```
 
-The command prints `flutterguard` and the installed version. Release 0.2.1 prints `flutterguard 0.2.1`. Dart `^3.13.0` is required because the package uses analyzer 14. That matches current Flutter stable.
+The command prints `flutterguard` and the installed version. Release 0.2.2 prints `flutterguard 0.2.2`. Dart `^3.13.0` is required because the package uses analyzer 14. That matches current Flutter stable.
 
 From a checkout of this repository:
 

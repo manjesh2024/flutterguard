@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.2
+
+- Leave `pubspec.lock` out of the basic example. A cold pub cache reports a missing LICENSE file for a locked direct dependency, so the example scan no longer depends on that cache.
+
 ## 0.2.1
 
 - Add runnable public examples: a Flutter application, a workspace, a controlled findings sample, and a library program that uses the existing scan API.

@@ -18,7 +18,7 @@ The published package must not contain credentials, private company rules, or ma
 
 `docs/` is the repository guide set required by the project layout. pub.dev warns on a plural top-level `docs` directory, so `.pubignore` omits it and `doc/README.md` points at the GitHub guides. `test/fixtures/` is also omitted. Those apps import Flutter and other packages on purpose, and publishing them as part of this Dart package would make pub analyze those imports as dependencies of FlutterGuard. The fixtures remain in the Git repository and in CI.
 
-`flutterguard_audit` 0.1.0 is the first version published on pub.dev. 0.1.1 documented the install path. 0.1.2 documents the public Dart API. 0.2.0 improves audit accuracy and the local HTML report. 0.2.1 adds the public example suite. Later versions follow the same dry-run and publish steps.
+`flutterguard_audit` 0.1.0 is the first version published on pub.dev. 0.1.1 documented the install path. 0.1.2 documents the public Dart API. 0.2.0 improves audit accuracy and the local HTML report. 0.2.1 adds the public example suite. 0.2.2 keeps that example scan independent of the local pub cache. Later versions follow the same dry-run and publish steps.
 
 `example/` is published. It contains the apps and the README shown on the pub.dev Example tab. `EXAMPLE_IMPLEMENTATION_REPORT.md` stays out of the package. Generated `build/` and `.dart_tool/` trees stay out as well.
 
@@ -26,7 +26,7 @@ The published package must not contain credentials, private company rules, or ma
 
 1. Run `./tool/verify_all.sh`.
 2. Confirm `CHANGELOG.md` and the version in `pubspec.yaml` match.
-3. Tag that commit `v` plus the pubspec version, for example `v0.2.1` for version `0.2.1`.
+3. Tag that commit `v` plus the pubspec version, for example `v0.2.2` for version `0.2.2`.
 4. Push the tag. `.github/workflows/release.yml` runs `./tool/verify_all.sh`, checks that the tag matches `pubspec.yaml`, and then calls `dart-lang/setup-dart/.github/workflows/publish.yml@v1`.
 5. The publish job uses GitHub environment `pub.dev` and OIDC. It does not use a long-lived pub.dev token.
 

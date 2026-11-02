@@ -1,6 +1,8 @@
-# FlutterGuard 0.2.1 example implementation
+# FlutterGuard 0.2.2 example implementation
 
-Verified on 2026-11-02. Published package `flutterguard_audit` 0.2.0 was not modified. This release is 0.2.1.
+Verified on 2026-11-02. Published package `flutterguard_audit` 0.2.0 was not modified. The example suite is released as 0.2.2.
+
+Tag `v0.2.1` pointed at the example commit and the release workflow failed before publishing. The basic-app regression test required zero findings, and a cold pub cache reports a missing LICENSE file for a locked direct dependency. `example/basic_flutter_app/pubspec.lock` is no longer committed. That tag was not moved. 0.2.1 was not uploaded to pub.dev.
 
 ## Examples
 
@@ -75,5 +77,6 @@ It does not include `test/fixtures/`, `docs/`, `doc/api/`, `build/`, `.dart_tool
 - Security, license, unused-dependency, and hardcoded-string results are heuristics.
 - `const Text('...')` is what the hardcoded-string check sees. A non-const `Text(...)` call is not collected.
 - pub.dev omits dotfiles and lockfiles. Use the visible `flutterguard.yaml` with `--config` from the published package.
-- No pub.dev score is claimed for 0.2.1.
-- The release workflow publishes a tag `vX.Y.Z` through GitHub environment `pub.dev`. A pre-release tag does not match that pattern. Automated publishing is not claimed until that workflow uploads 0.2.1.
+- No pub.dev score is claimed for 0.2.2.
+- The release workflow publishes a tag `vX.Y.Z` through GitHub environment `pub.dev`. A pre-release tag does not match that pattern. Automated publishing is not claimed until that workflow uploads 0.2.2.
+- The basic example does not commit `pubspec.lock`. `flutter pub get` recreates it locally.
